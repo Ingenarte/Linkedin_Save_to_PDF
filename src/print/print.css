@@ -1,12 +1,117 @@
-:root { --muted:#666; --sep:#ddd; --title:#111; --h:#333; }
-html, body { margin:0; padding:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:#111; }
-main { max-width: 800px; margin: 24px auto; padding: 0 16px; }
-.header h1 { margin: 0; font-size: 28px; color: var(--title); }
-.header .headline { color: var(--h); margin-top: 4px; }
-.section { margin-top: 20px; }
-.section h2 { margin: 0 0 8px 0; font-size: 18px; border-bottom: 1px solid var(--sep); padding-bottom: 4px; }
-.item { margin: 8px 0 12px; }
-.meta { color: var(--muted); font-size: 12px; }
-ul { margin: 6px 0 0 18px; }
-footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
-@media print { a[href]:after { content: ""; } }
+/* Force LIGHT theme for preview and print */
+:root {
+  color-scheme: light; /* tell the UA we're light */
+  --bg: #ffffff; /* page background */
+  --panel: #ffffff; /* card/panel background */
+  --text: #111111; /* main text */
+  --muted: #666666; /* secondary text */
+  --sep: #e5e7eb; /* separators/borders */
+  --title: #111111; /* headings */
+  --h: #333333; /* subheadings */
+  --accent: #0645ad; /* link color */
+}
+
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+}
+
+/* Base layout (always light) */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg) !important;
+  color: var(--text) !important;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+main {
+  max-width: 800px;
+  margin: 24px auto;
+  padding: 0 16px 32px;
+  background: var(--panel) !important;
+  border: 1px solid var(--sep) !important;
+  border-radius: 8px;
+  box-shadow: none; /* avoid dark halos on print */
+}
+
+/* Header */
+.header h1 {
+  margin: 0;
+  font-size: 28px;
+  color: var(--title) !important;
+}
+.header .headline {
+  color: var(--h) !important;
+  margin-top: 6px;
+}
+
+/* Sections */
+.section {
+  margin-top: 22px;
+  background: var(--panel) !important;
+  color: var(--text) !important;
+}
+.section h2 {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  color: var(--title) !important;
+  border-bottom: 1px solid var(--sep) !important;
+  padding-bottom: 6px;
+}
+
+/* Items & metadata */
+.item {
+  margin: 10px 0 14px;
+}
+.meta {
+  color: var(--muted) !important;
+  font-size: 12px;
+}
+
+/* Lists & links */
+ul {
+  margin: 6px 0 0 18px;
+}
+a {
+  color: var(--accent) !important;
+  text-decoration: underline;
+}
+
+/* Footer */
+footer {
+  color: var(--muted) !important;
+  font-size: 12px;
+  margin-top: 28px;
+  border-top: 1px solid var(--sep) !important;
+  padding-top: 10px;
+}
+
+/* Hard override in case the browser/app tries to force dark */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: light;
+  }
+  html,
+  body,
+  main,
+  .section,
+  .header,
+  footer {
+    background: #ffffff !important;
+    color: #111111 !important;
+    box-shadow: none !important;
+  }
+  .section h2,
+  footer {
+    border-color: #e5e7eb !important;
+  }
+  a {
+    color: #0645ad !important;
+  }
+}

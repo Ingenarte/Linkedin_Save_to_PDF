@@ -11,4 +11,7 @@ Export LinkedIn profiles as clean, print-ready PDFs — even if the official “
 Processing happens locally; no external requests. See PRIVACY.md.
 
 ## Author
-Franco Mariano Rodrigo — https://www.linkedin.com/in/fmrodrigo/ — Ingenarte — contacto.ingenarte@gmail.com
+Author: Franco Mariano Rodrigo — https://www.linkedin.com/in/fmrodrigo/
+Company: Ingenarte — https://www.ingenarte.com
+Contact: contacto.ingenarte@gmail.com
+GitHub: https://github.com/Ingenarte
