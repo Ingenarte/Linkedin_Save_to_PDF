@@ -1,0 +1,12 @@
+:root { --muted:#666; --sep:#ddd; --title:#111; --h:#333; }
+html, body { margin:0; padding:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:#111; }
+main { max-width: 800px; margin: 24px auto; padding: 0 16px; }
+.header h1 { margin: 0; font-size: 28px; color: var(--title); }
+.header .headline { color: var(--h); margin-top: 4px; }
+.section { margin-top: 20px; }
+.section h2 { margin: 0 0 8px 0; font-size: 18px; border-bottom: 1px solid var(--sep); padding-bottom: 4px; }
+.item { margin: 8px 0 12px; }
+.meta { color: var(--muted); font-size: 12px; }
+ul { margin: 6px 0 0 18px; }
+footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
+@media print { a[href]:after { content: ""; } }
