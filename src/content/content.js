@@ -655,7 +655,7 @@ function extractFromJsonLd() {
 // Orchestrator
 ///////////////////////
 async function extractAll(msg) {
-  await expandUI();
+  //await expandUI();
 
   // Header
   const header = extractHeader();
