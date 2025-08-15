@@ -1,14 +1,13 @@
-/* Force LIGHT theme for preview and print */
 :root {
-  color-scheme: light; /* tell the UA we're light */
-  --bg: #ffffff; /* page background */
-  --panel: #ffffff; /* card/panel background */
-  --text: #111111; /* main text */
-  --muted: #666666; /* secondary text */
-  --sep: #e5e7eb; /* separators/borders */
-  --title: #111111; /* headings */
-  --h: #333333; /* subheadings */
-  --accent: #0645ad; /* link color */
+  color-scheme: light;
+  --bg: #ffffff;
+  --panel: #ffffff;
+  --text: #111111;
+  --muted: #666666;
+  --sep: #e5e7eb;
+  --title: #111111;
+  --h: #333333;
+  --accent: #0645ad;
 }
 
 @media print {
@@ -20,7 +19,6 @@
   }
 }
 
-/* Base layout (always light) */
 html,
 body {
   margin: 0;
@@ -37,33 +35,42 @@ main {
   background: var(--panel) !important;
   border: 1px solid var(--sep) !important;
   border-radius: 8px;
-  box-shadow: none; /* avoid dark halos on print */
 }
 
-/* Header */
+/* Header layout */
+.header.section {
+  display: grid;
+  grid-template-columns: 1fr auto; /* text on the left, photo on the right */
+  grid-gap: 16px;
+  align-items: center;
+}
+
 .header h1 {
   margin: 0;
   font-size: 28px;
   color: var(--title) !important;
 }
+
 .header .headline {
   color: var(--h) !important;
   margin-top: 6px;
 }
 
-.header {
+.header .meta {
+  color: var(--muted) !important;
+  font-size: 12px;
+}
+
+.header .right {
   display: flex;
-  align-items: center;
-  justify-content: space-between; /* put name left, image right */
-  gap: 16px;
+  justify-content: flex-end;
 }
 
 .profile-photo {
-  width: 100px;
-  height: 100px;
+  width: 110px;
+  height: 110px;
   border-radius: 50%;
   object-fit: cover;
-  /* remove order:-1 so it stays at the end */
 }
 
 /* Sections */
@@ -80,7 +87,6 @@ main {
   padding-bottom: 6px;
 }
 
-/* Items & metadata */
 .item {
   margin: 10px 0 14px;
 }
@@ -89,7 +95,6 @@ main {
   font-size: 12px;
 }
 
-/* Lists & links */
 ul {
   margin: 6px 0 0 18px;
 }
@@ -98,7 +103,6 @@ a {
   text-decoration: underline;
 }
 
-/* Footer */
 footer {
   color: var(--muted) !important;
   font-size: 12px;
@@ -107,7 +111,6 @@ footer {
   padding-top: 10px;
 }
 
-/* Hard override in case the browser/app tries to force dark */
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: light;

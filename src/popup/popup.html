@@ -8,31 +8,146 @@
   <body>
     <h3 class="title">LinkedIn ATS Save to PDF</h3>
 
-    <div class="center center--top">
-      <button id="exportBtn" class="btn">Export to PDF</button>
-    </div>
+    <!-- Nav -->
+    <nav class="tabs">
+      <button class="tab-btn" data-view="main" aria-selected="true">
+        Main
+      </button>
+      <button class="tab-btn" data-view="settings">Settings</button>
+      <button class="tab-btn" data-view="info">Info</button>
+    </nav>
 
-    <!-- Visual progress indicator -->
-    <div id="progress" class="progress" aria-hidden="true">
-      <div class="progress__bar"></div>
-    </div>
+    <!-- View: Main -->
+    <section id="view-main" class="view is-active">
+      <div class="center center--top">
+        <button id="exportBtn" class="btn">Export to PDF</button>
+      </div>
 
-    <!-- <div class="hint">
-      All processing happens locally. No data leaves your device.
-    </div> -->
-    <div class="hint">
-      Author:
-      <a href="https://www.linkedin.com/in/fmrodrigo/" target="_blank"
-        >Franco Mariano Rodrigo</a
-      >
-      · <a href="https://www.ingenarte.com" target="_blank">Ingenarte</a> ·
-      <a
-        href="https://github.com/Ingenarte/Linkedin_Save_to_PDF"
-        target="_blank"
-        >GitHub</a
-      >
-    </div>
-    <p id="status" class="hint"></p>
+      <div id="progress" class="progress" aria-hidden="true">
+        <div class="progress__bar"></div>
+      </div>
+
+      <p id="status" class="hint"></p>
+
+      <!-- Preview -->
+      <div id="preview" class="preview" hidden>
+        <section id="pv-header" class="section">
+          <div class="preview__line preview__name" id="pv-name"></div>
+          <div class="preview__line preview__headline" id="pv-headline"></div>
+          <div class="preview__line preview__meta" id="pv-meta"></div>
+        </section>
+        <section id="pv-contact-section" class="section">
+          <div class="preview__label">Contact</div>
+          <ul id="pv-contact" class="preview__list"></ul>
+        </section>
+      </div>
+
+      <div class="hint">
+        Author:
+        <a href="https://www.linkedin.com/in/fmrodrigo/" target="_blank">
+          Franco Mariano Rodrigo
+        </a>
+        · <a href="https://www.ingenarte.com" target="_blank">Ingenarte</a> ·
+        <a
+          href="https://github.com/Ingenarte/Linkedin_Save_to_PDF"
+          target="_blank"
+          >GitHub</a
+        >
+      </div>
+    </section>
+
+    <!-- View: Settings -->
+    <section id="view-settings" class="view" aria-hidden="true">
+      <form id="settingsForm" class="form">
+        <h4 class="subtitle">Sections to include</h4>
+
+        <div class="grid">
+          <label class="row">
+            <input type="checkbox" name="profileHeader" />
+            <span>Profile Header (name, headline, location, export date)</span>
+          </label>
+
+          <label class="row">
+            <input type="checkbox" name="withPhoto" />
+            <span>Include profile photo</span>
+          </label>
+
+          <label class="row">
+            <input type="checkbox" name="contact" />
+            <span>Contact</span>
+          </label>
+
+          <label class="row">
+            <input type="checkbox" name="about" />
+            <span>Summary (About)</span>
+          </label>
+
+          <label class="row">
+            <input type="checkbox" name="experience" />
+            <span>Experience</span>
+          </label>
+
+          <label class="row">
+            <input type="checkbox" name="education" />
+            <span>Education</span>
+          </label>
+
+          <label class="row">
+            <input type="checkbox" name="certifications" />
+            <span>Certifications</span>
+          </label>
+
+          <label class="row">
+            <input type="checkbox" name="skills" />
+            <span>Top Skills</span>
+          </label>
+
+          <label class="row">
+            <input type="checkbox" name="languages" />
+            <span>Languages</span>
+          </label>
+
+          <label class="row">
+            <input type="checkbox" name="honors" />
+            <span>Honors & Awards</span>
+          </label>
+
+          <label class="row">
+            <input type="checkbox" name="publications" />
+            <span>Publications</span>
+          </label>
+
+          <label class="row">
+            <input type="checkbox" name="interests" />
+            <span>Interests</span>
+          </label>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn">Save</button>
+          <button type="button" id="resetBtn" class="btn btn--ghost">
+            Reset defaults
+          </button>
+        </div>
+
+        <p id="settingsStatus" class="hint" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <!-- View: Info -->
+    <section id="view-info" class="view" aria-hidden="true">
+      <h4 class="subtitle">Remove Chrome print header/footer</h4>
+      <ol class="info-steps">
+        <li>Open the Chrome print dialog.</li>
+        <li>Click “More settings”.</li>
+        <li>Uncheck “Headers and footers”.</li>
+        <li>Optionally, enable “Background graphics”.</li>
+      </ol>
+      <p class="hint">
+        These instructions affect the current browser; they are not specific to
+        the extension.
+      </p>
+    </section>
 
     <script src="./popup.js"></script>
   </body>

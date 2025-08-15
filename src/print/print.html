@@ -1,12 +1,20 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>LinkedIn Profile — Print</title>
+    <title>LinkedIn Profile - Print</title>
     <link rel="stylesheet" href="./print.css" />
   </head>
   <body>
-    <main id="root"></main>
-    <script type="module" src="./print.js"></script>
+    <main>
+      <div id="root"></div>
+    </main>
+
+    <!-- Modular render pipeline -->
+    <script src="./print-utils.js"></script>
+    <script src="./print-render-header.js"></script>
+    <script src="./print-render-sections.js"></script>
+    <script src="./print-finalize.js"></script>
+    <script src="./print-main.js"></script>
   </body>
 </html>

@@ -186,8 +186,8 @@
       honors: d.honors?.length || 0,
       interests: d.interests?.length || 0,
     };
-    console.log('EXTRACTED DATA');
-    console.table(summary);
+    // console.log('EXTRACTED DATA');
+    // console.table(summary);
   }
 
   // Chrome runtime message
@@ -252,3 +252,58 @@
     }
   })();
 })();
+
+// --- START_EXPORT handler
+if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    if (msg?.type === 'START_EXPORT') {
+      (async () => {
+        try {
+          // console.log(
+          //   '[content] START_EXPORT received. Settings:',
+          //   msg.settings
+          // );
+
+          // 1) Extract
+          const data = await window.__LNP_extractAll({ tabUrl: location.href });
+          // console.log('[content] Extracted payload:', data);
+
+          // 2) Store (use callback, not await)
+          const nonce = `lnp_${Date.now()}_${Math.random()
+            .toString(36)
+            .slice(2)}`;
+          const payload = { [nonce]: { data, settings: msg.settings } };
+
+          chrome.storage.local.set(payload, () => {
+            const err = chrome.runtime.lastError;
+            if (err) {
+              console.error('[content] storage.set error:', err);
+              sendResponse({ ok: false, error: String(err) });
+              return;
+            }
+
+            // console.log(
+            //   '[content] Stored payload under nonce:',
+            //   nonce,
+            //   payload
+            // );
+
+            // 3) Open print page AFTER storage write is done
+            const printUrl = chrome.runtime.getURL(
+              `src/print/print.html?nonce=${encodeURIComponent(nonce)}`
+            );
+            // console.log('[content] Opening print page:', printUrl);
+            window.open(printUrl, '_blank', 'noopener');
+
+            sendResponse({ ok: true, nonce });
+          });
+        } catch (err) {
+          console.error('[content] START_EXPORT error:', err);
+          sendResponse({ ok: false, error: String(err) });
+        }
+      })();
+
+      return true; // keep the channel open for async sendResponse
+    }
+  });
+}

@@ -19,29 +19,26 @@
   "content_scripts": [
     {
       "matches": [
-        "https://www.linkedin.com/in/*",
-        "https://www.linkedin.com/profile/*"
+        "https://*.linkedin.com/in/*",
+        "https://*.linkedin.com/profile/*",
+        "https://media.licdn.com/*"
       ],
       "js": [
         "src/content/ns.js",
         "src/content/utils.js",
         "src/content/jsonld.js",
-
         "src/content/header.js",
         "src/content/contact.js",
         "src/content/about.js",
         "src/content/experience.js",
         "src/content/education.js",
-
         "src/content/certifications.js",
         "src/content/publications.js",
         "src/content/skills.js",
         "src/content/languages.js",
         "src/content/honors.js",
         "src/content/interests.js",
-
         "src/content/printTable.js",
-
         "src/content/bridge.js",
         "src/content/extractATS.js",
         "src/content/content.js"
@@ -54,7 +51,11 @@
       "resources": [
         "src/print/print.html",
         "src/print/print.css",
-        "src/print/print.js",
+        "src/print/print-utils.js",
+        "src/print/print-render-header.js",
+        "src/print/print-render-sections.js",
+        "src/print/print-finalize.js",
+        "src/print/print-main.js",
         "page-hook.js"
       ],
       "matches": ["https://*.linkedin.com/*"]
