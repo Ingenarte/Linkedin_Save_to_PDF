@@ -5,7 +5,7 @@
 ///////////////////////
 // Boot
 ///////////////////////
-console.log('[lnp] content LOADED', location.href);
+// console.log('[lnp] content LOADED', location.href);
 
 ///////////////////////
 // Utilities
@@ -151,6 +151,31 @@ function cleanLocation(loc) {
   return v;
 }
 
+function pickImageUrl(el) {
+  if (!el) return undefined;
+  // Prefer data-delayed-url if present (LinkedIn lazy)
+  const delayed =
+    el.getAttribute('data-delayed-url') || el.getAttribute('data-test-src');
+  if (delayed) return delayed;
+
+  const srcset = el.getAttribute('srcset');
+  if (srcset) {
+    const last = srcset.split(',').pop();
+    if (last) {
+      const url = last.trim().split(/\s+/)[0];
+      if (url) return url;
+    }
+  }
+  return el.getAttribute('src') || el.src || undefined;
+}
+
+// Fallback to Open Graph or Twitter image
+function getOgImage() {
+  const og = document.querySelector('meta[property="og:image"]')?.content;
+  const tw = document.querySelector('meta[name="twitter:image"]')?.content;
+  return og || tw || undefined;
+}
+
 function extractHeader() {
   const name =
     T(Q('[data-test-id="hero__name"]')) || T(Q('header h1')) || T(Q('h1'));
@@ -159,9 +184,8 @@ function extractHeader() {
     T(Q('[data-test-id="hero__headline"]')) ||
     T(Q('div.text-body-medium.break-words'));
 
-  // Location: prefer the exact span you pasted, then fall back to other variants
   const locNode =
-    Q('.text-body-small.inline.t-black--light.break-words') || // <-- your exact node
+    Q('.text-body-small.inline.t-black--light.break-words') ||
     Q('[data-test-id="hero__location"]') ||
     Q('section div.inline-flex span.inline.t-14.t-normal.t-black--light') ||
     Q('.pv-text-details__left-panel span.t-14.t-black--light') ||
@@ -169,17 +193,27 @@ function extractHeader() {
     Q('li.t-16.t-black.t-normal.inline-block');
 
   let location = cleanLocation(T(locNode));
-
-  // JSON-LD fallback if nothing matched
   if (!location) {
     const j = extractFromJsonLd();
     location = j.location || undefined;
   }
 
+  // Profile image candidates
+  const imgEl =
+    Q('img.pv-top-card-profile-picture__image') ||
+    Q('.pv-top-card-profile-picture img') ||
+    Q('.pv-top-card__photo img') ||
+    Q('img[src*="profile-displayphoto" i]') ||
+    Q('img[alt*="profile" i]') ||
+    Q('.presence-entity__image img, .ivm-view-attr__img--centered');
+
+  const profileImage = pickImageUrl(imgEl) || getOgImage();
+
   return {
     name: norm(name) || 'LinkedIn Profile',
     headline: norm(headline),
     location,
+    profileImage,
   };
 }
 
@@ -655,14 +689,16 @@ function extractFromJsonLd() {
 // Orchestrator
 ///////////////////////
 async function extractAll(msg) {
-  //await expandUI();
+  // await expandUI(); // opcional
 
   // Header
   const header = extractHeader();
   const jsonld = extractFromJsonLd();
+
   const name = header.name || jsonld.name || 'LinkedIn Profile';
   const headline = header.headline || jsonld.headline || undefined;
   const location = header.location || jsonld.location || undefined;
+  const profileImage = header.profileImage || undefined;
 
   // Contact + URL + slug
   const publicProfileUrl = extractPublicProfileURL(msg?.tabUrl);
@@ -689,6 +725,7 @@ async function extractAll(msg) {
     headline,
     location,
     slug,
+    profileImage,
     // Contact block
     contact, // { publicProfile?, email?, websites?[] }
     // Sections
@@ -749,12 +786,15 @@ window.addEventListener('message', async (e) => {
 ///////////////////////
 function LNP_printTable(data) {
   const d = data || {};
+
+  // Summary booleans and counts
   const summary = {
     name: !!d.name,
     headline: !!d.headline,
     location: !!d.location,
     slug: !!d.slug,
     contact: !!d.contact,
+    profileImage: !!d.profileImage,
     about_len: d.about?.length || 0,
     experiences: d.experiences?.length || 0,
     education: d.education?.length || 0,
@@ -765,8 +805,14 @@ function LNP_printTable(data) {
     honors: d.honors?.length || 0,
     interests: d.interests?.length || 0,
   };
-  console.log('EXTRACTED DATA');
+
+  console.log('LINKEDIN ATS TO PDF: EXTRACTED DATA');
   console.table(summary);
+
+  // Only log profile image URL (no preview)
+  if (d.profileImage && typeof d.profileImage === 'string') {
+    console.log('profileImage URL:', d.profileImage.trim());
+  }
 
   // Missing-first list for key sections
   const FOCUS_FIELDS = [
@@ -803,3 +849,24 @@ window.LNP_table = async function () {
   LNP_printTable(data);
   return data;
 };
+
+function linkedin_ats_test() {
+  console.log('[lnp] Running linkedin_ats_test()...');
+  window.postMessage({ type: '__LNP_EXTRACT_REQ' }, '*');
+}
+
+// Inject page-hook.js into PAGE context, bypassing CSP that blocks inline scripts
+(function installPageAPIs() {
+  try {
+    if (window.__lnp_page_api_installed__) return;
+    const url = chrome.runtime.getURL('page-hook.js');
+    const s = document.createElement('script');
+    s.src = url;
+    s.onload = () => s.remove();
+    (document.documentElement || document.head).appendChild(s);
+    window.__lnp_page_api_installed__ = true;
+    console.debug('[lnp] content: injected page-hook.js');
+  } catch (err) {
+    console.error('[lnp] content: injecting page-hook.js failed', err);
+  }
+})();

@@ -31,9 +31,10 @@
       "resources": [
         "src/print/print.html",
         "src/print/print.css",
-        "src/print/print.js"
+        "src/print/print.js",
+        "page-hook.js"
       ],
-      "matches": ["<all_urls>"]
+      "matches": ["https://*.linkedin.com/*"]
     }
   ]
 }

@@ -82,15 +82,19 @@ function renderHeader(root, data) {
       ? `https://www.linkedin.com/in/${encodeURIComponent(data.slug)}/`
       : null);
 
+  // Left column: name, headline, meta
+  const left = el('div', 'left');
+
   // h1 as a link when we have a profile URL
   const h1 = el('h1', '');
   if (profileURL) h1.append(a(profileURL, name));
   else h1.textContent = name;
-  header.append(h1);
+  left.append(h1);
 
-  if (data.headline) header.append(el('div', 'headline', data.headline));
+  // Headline
+  if (data.headline) left.append(el('div', 'headline', data.headline));
 
-  // meta line: location · /in/slug (clickable) · Exported: …
+  // Meta line: location · /in/slug · Exported: …
   const metaParts = [];
   if (data.location) metaParts.push(data.location);
   if (data.slug)
@@ -104,13 +108,24 @@ function renderHeader(root, data) {
     metaParts.push(
       ` Exported: ${new Date(data.lastUpdatedISO).toLocaleString()}`
     );
-  if (metaParts.length) header.append(joinInline(metaParts));
+  if (metaParts.length) left.append(joinInline(metaParts));
 
-  // Title used by the browser
+  header.append(left);
+
+  // Right: profile image (append AFTER left so it renders on the right)
+  if (data.profileImage) {
+    const img = document.createElement('img');
+    img.src = data.profileImage;
+    img.alt = data.name || 'Profile photo';
+    img.className = 'profile-photo';
+    header.append(img);
+  }
+
+  // Document title
   const safeName = sanitizeForTitle(name);
   const safeSlug = sanitizeForTitle(data.slug || '');
   document.title = safeSlug
-    ? `LinkedIn Profile - ${safeName} — _in_${safeSlug}`
+    ? `LinkedIn Profile - ${safeName} _in_${safeSlug}`
     : `LinkedIn Profile - ${safeName}`;
 
   root.append(header);

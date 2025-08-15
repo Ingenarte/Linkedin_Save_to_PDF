@@ -51,6 +51,21 @@ main {
   margin-top: 6px;
 }
 
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* put name left, image right */
+  gap: 16px;
+}
+
+.profile-photo {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  /* remove order:-1 so it stays at the end */
+}
+
 /* Sections */
 .section {
   margin-top: 22px;
