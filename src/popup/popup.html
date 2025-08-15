@@ -13,8 +13,66 @@
       <button class="tab-btn" data-view="main" aria-selected="true">
         Main
       </button>
-      <button class="tab-btn" data-view="settings">Settings</button>
-      <button class="tab-btn" data-view="info">Info</button>
+
+      <button class="tab-btn" data-view="settings">
+        <!-- Settings Icon -->
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="12" r="3"></circle>
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 
+               1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 
+               2 0 0 1-4 0v-.09a1.65 
+               1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 
+               2 0 1 1-2.83-2.83l.06-.06a1.65 
+               1.65 0 0 0 .33-1.82 1.65 
+               1.65 0 0 0-1.51-1H3a2 
+               2 0 0 1 0-4h.09a1.65 
+               1.65 0 0 0 1.51-1 1.65 
+               1.65 0 0 0-.33-1.82l-.06-.06a2 
+               2 0 1 1 2.83-2.83l.06.06a1.65 
+               1.65 0 0 0 1.82.33h.09a1.65 
+               1.65 0 0 0 1-1.51V3a2 
+               2 0 0 1 4 0v.09a1.65 
+               1.65 0 0 0 1 1.51 1.65 
+               1.65 0 0 0 1.82-.33l.06-.06a2 
+               2 0 1 1 2.83 2.83l-.06.06a1.65 
+               1.65 0 0 0-.33 1.82v.09a1.65 
+               1.65 0 0 0 1.51 1H21a2 
+               2 0 0 1 0 4h-.09a1.65 
+               1.65 0 0 0-1.51 1z"
+          ></path>
+        </svg>
+        <span>Settings</span>
+      </button>
+      <button class="tab-btn" data-view="info">
+        <!-- Info Icon -->
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <span>Info</span>
+      </button>
     </nav>
 
     <!-- View: Main -->
@@ -30,7 +88,7 @@
       <p id="status" class="hint"></p>
 
       <!-- Preview -->
-      <div id="preview" class="preview" hidden>
+      <!-- <div id="preview" class="preview" hidden>
         <section id="pv-header" class="section">
           <div class="preview__line preview__name" id="pv-name"></div>
           <div class="preview__line preview__headline" id="pv-headline"></div>
@@ -40,7 +98,7 @@
           <div class="preview__label">Contact</div>
           <ul id="pv-contact" class="preview__list"></ul>
         </section>
-      </div>
+      </div> -->
 
       <div class="hint">
         Author:
