@@ -22,7 +22,30 @@
         "https://www.linkedin.com/in/*",
         "https://www.linkedin.com/profile/*"
       ],
-      "js": ["src/content/content.js"],
+      "js": [
+        "src/content/ns.js",
+        "src/content/utils.js",
+        "src/content/jsonld.js",
+
+        "src/content/header.js",
+        "src/content/contact.js",
+        "src/content/about.js",
+        "src/content/experience.js",
+        "src/content/education.js",
+
+        "src/content/certifications.js",
+        "src/content/publications.js",
+        "src/content/skills.js",
+        "src/content/languages.js",
+        "src/content/honors.js",
+        "src/content/interests.js",
+
+        "src/content/printTable.js",
+
+        "src/content/bridge.js",
+        "src/content/extractATS.js",
+        "src/content/content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
