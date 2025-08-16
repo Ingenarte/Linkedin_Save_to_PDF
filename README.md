@@ -5,6 +5,12 @@ All processing happens **locally** in your browser. No data is collected or tran
 
 ---
 
+## 📺 Demo Video
+
+[![Watch the video](https://img.youtube.com/vi/qaF22afbCzw/0.jpg)](https://www.youtube.com/watch?v=qaF22afbCzw)
+
+---
+
 ## 🚀 Features
 
 - **One-click export** from any LinkedIn profile.
