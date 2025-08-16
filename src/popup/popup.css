@@ -215,3 +215,9 @@ a {
 .preview__list li {
   margin: 2px 0;
 }
+
+.status-error {
+  color: #c00;
+  font-weight: 700;
+  text-align: center;
+}

@@ -262,14 +262,15 @@ async function startExport() {
   const status = document.getElementById('status');
   const progress = document.getElementById('progress');
 
+  // control de limpieza diferida del mensaje
+  let clearDelay = 1500;
+
   try {
     status.textContent = 'Extracting profile...';
     progress?.setAttribute('aria-hidden', 'false');
 
     const settings = await loadSettings();
 
-    // Delegate extraction and print launching to the content script.
-    // It will store the payload and open the print page.
     const resp = await sendToActiveTab({
       type: 'START_EXPORT',
       settings,
@@ -283,12 +284,26 @@ async function startExport() {
   } catch (err) {
     console.error('[popup] Export error', err);
     const lastErr = chrome.runtime.lastError?.message || String(err || '');
-    status.textContent = `Export failed: ${lastErr}`;
+
+    // Detecta el caso solicitado
+    const isContentMissing = /Content script not available in this tab\./i.test(
+      lastErr
+    );
+
+    if (isContentMissing) {
+      // Mensaje centrado, rojo y negrita
+      status.setAttribute('role', 'alert');
+      status.innerHTML =
+        '<strong style="color:#c00;display:block;text-align:center">Refresh tab or restart browser</strong>';
+      clearDelay = 4000; // deja el mensaje visible un poco mas
+    } else {
+      status.textContent = `Export failed: ${lastErr}`;
+    }
   } finally {
     setTimeout(() => {
       status.textContent = '';
       progress?.setAttribute('aria-hidden', 'true');
-    }, 1500);
+    }, clearDelay);
   }
 }
 
