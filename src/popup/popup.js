@@ -81,13 +81,12 @@ async function getActiveLinkedInTab() {
 }
 
 // Optional ping to verify the content script is alive.
-// If you prefer, you may inject files here with chrome.scripting as a fallback.
+
 async function ensureContentReady(tabId) {
   try {
     await chrome.tabs.sendMessage(tabId, { type: 'PING_LNP' });
     return true;
   } catch (_e) {
-    // If needed, you can inject content scripts here with chrome.scripting.executeScript.
     // For now, just return false so the caller can surface a helpful error.
     return false;
   }

@@ -50,7 +50,6 @@ See [PRIVACY.md](./PRIVACY.md) for details.
 | ------------------ | ---------------------------------------------------------------------- |
 | `activeTab`        | Allows extracting data from the currently active LinkedIn profile tab. |
 | `storage`          | Temporarily stores extracted data to pass it to the print view.        |
-| `scripting`        | Allows injecting content scripts programmatically if needed.           |
 | `host_permissions` | Restricted to `https://*.linkedin.com/*` for content extraction.       |
 
 ---

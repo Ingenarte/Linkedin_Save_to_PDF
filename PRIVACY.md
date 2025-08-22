@@ -36,7 +36,6 @@ It works entirely offline once loaded.
 
 - **`activeTab`** — Needed to read the content of the currently active LinkedIn profile tab after you click export.
 - **`storage`** — Used only for short-term data transfer between scripts; cleared immediately after printing.
-- **`scripting`** — Allows injecting content scripts programmatically if needed for compatibility.
 
 ---
 
