@@ -78,7 +78,7 @@ Linkedin_Save_to_PDF-main/
 ```bash
 rm -rf dist && mkdir -p dist/Linkedin_Save_to_PDF
 rsync -a   ./Linkedin_Save_to_PDF-main/ ./dist/Linkedin_Save_to_PDF/
-(cd dist && zip -r Linkedin_Save_to_PDF_v0.3.0.zip Linkedin_Save_to_PDF)
+(cd dist && zip -r Linkedin_Save_to_PDF_vX.X.X.zip Linkedin_Save_to_PDF)
 ```
 
 ---
