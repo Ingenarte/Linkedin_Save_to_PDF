@@ -2,7 +2,7 @@
 // IMPORTANT: This file assumes the following have already been loaded in this order:
 // utils.js, jsonld.js, header.js, contact.js, about.js, experience.js,
 // education.js, certifications.js, publications.js, skills.js,
-// languages.js, honors.js, interests.js, printTable.js, bridge.js
+// languages.js, honors.js, interests.js
 
 // Main Orchestrator using namespace functions
 (function () {
@@ -11,7 +11,7 @@
   function extractFromJsonLd() {
     try {
       const scripts = Array.from(
-        document.querySelectorAll('script[type="application/ld+json"]')
+        document.querySelectorAll('script[type="application/ld+json"]'),
       );
       for (const s of scripts) {
         const txt = s.textContent || '';
@@ -32,13 +32,18 @@
     return {};
   }
 
+  // LinkedIn is a SPA. After in-app navigation between profiles, the
+  // <link rel="canonical"> and <meta property="og:url"> tags are often
+  // STALE and still point at the previously-loaded page (frequently the
+  // logged-in user's own profile). Live URL sources (tabUrl / location.href)
+  // are authoritative and must be preferred.
   function extractPublicProfileURL(tabUrl) {
     const Q = (sel, root = document) => root.querySelector(sel);
     const cand = [
-      Q('link[rel="canonical"]')?.href,
-      Q('meta[property="og:url"]')?.content,
       tabUrl,
       location.href,
+      Q('link[rel="canonical"]')?.href,
+      Q('meta[property="og:url"]')?.content,
     ].filter(Boolean);
     for (const href of cand) {
       try {
@@ -53,10 +58,10 @@
   function computeSlug(tabUrl) {
     const Q = (sel, root = document) => root.querySelector(sel);
     const sources = [
-      Q('link[rel="canonical"]')?.href,
-      Q('meta[property="og:url"]')?.content,
       tabUrl,
       location.href,
+      Q('link[rel="canonical"]')?.href,
+      Q('meta[property="og:url"]')?.content,
     ].filter(Boolean);
     for (const href of sources) {
       try {
@@ -86,7 +91,7 @@
     const raw = uniqueByCI(
       QA('a[href^="mailto:"], a[href^="https://"], a[href^="http://"]')
         .map((a) => a.getAttribute('href'))
-        .filter(Boolean)
+        .filter(Boolean),
     );
     const isInternalLinkedIn = (u) => {
       try {
@@ -109,7 +114,39 @@
     };
   }
 
+  // Expands lazy-loaded UI before extraction so collapsed sections
+  // (Skills / Languages / Honors / Publications / Interests, plus
+  // "see more" descriptions) are visible to the extractors. Without
+  // this, sections selected by the user can come back empty.
+  async function expandIfPossible() {
+    try {
+      if (typeof ns.expandUI === 'function') {
+        await ns.expandUI();
+        return;
+      }
+      if (
+        typeof ns.clickMoreButtons === 'function' &&
+        typeof ns.autoScroll === 'function'
+      ) {
+        await ns.clickMoreButtons();
+        await ns.autoScroll(2);
+        if (typeof ns.wait === 'function') await ns.wait(400);
+      }
+    } catch (e) {
+      console.warn('[content] expand pre-extraction failed:', e);
+    }
+  }
+
   async function extractAll(msg) {
+    // The popup's preview pings us with `quick: true` every time it
+    // opens. In that mode we skip the lazy-load scroll pipeline (which
+    // visibly moves the page) and only read whatever is already in
+    // the DOM above the fold. The Export action sends a non-quick
+    // request which performs the full PageDown sweep.
+    if (!(msg && msg.quick)) {
+      await expandIfPossible();
+    }
+
     // Header
     const header = (ns.extractHeader && ns.extractHeader()) || {};
     const jsonld = extractFromJsonLd();
@@ -146,7 +183,7 @@
       : undefined;
     const interests = ns.extractInterests ? ns.extractInterests() : undefined;
 
-    return {
+    const data = {
       name,
       headline,
       location,
@@ -164,40 +201,68 @@
       interests,
       lastUpdatedISO: new Date().toISOString(),
     };
+    return typeof ns.sanitizeExportPayload === 'function'
+      ? ns.sanitizeExportPayload(data) || {}
+      : data;
   }
 
-  // Console summary (sin preview de imagen)
-  function LNP_printTable(data) {
-    const d = data || {};
-    const summary = {
-      name: !!d.name,
-      headline: !!d.headline,
-      location: !!d.location,
-      slug: !!d.slug,
-      contact: !!d.contact,
-      profileImage: !!d.profileImage,
-      about_len: d.about?.length || 0,
-      experiences: d.experiences?.length || 0,
-      education: d.education?.length || 0,
-      certifications: d.certifications?.length || 0,
-      skills: d.skills?.length || 0,
-      publications: d.publications?.length || 0,
-      languages: d.languages?.length || 0,
-      honors: d.honors?.length || 0,
-      interests: d.interests?.length || 0,
-    };
-    // console.log('EXTRACTED DATA');
-    // console.table(summary);
+  // Maps a section name (as used by the deep-export orchestrator) to the
+  // namespaced extractor function that produces its payload.
+  const SECTION_EXTRACTORS = {
+    about: 'extractAbout',
+    experience: 'extractExperience',
+    education: 'extractEducation',
+    certifications: 'extractCertifications',
+    skills: 'extractSkills',
+    languages: 'extractLanguages',
+    honors: 'extractHonorsAwards',
+    publications: 'extractPublications',
+    interests: 'extractInterests',
+  };
+
+  // Runs a single section extractor after ensuring lazy content is
+  // loaded. Used by the background service worker when performing a
+  // deep export from a /details/<section>/ sub-page.
+  async function extractSection(msg) {
+    const section = typeof msg === 'string' ? msg : msg?.section;
+    const budgetMs =
+      typeof msg === 'object' && msg && typeof msg.budgetMs === 'number'
+        ? msg.budgetMs
+        : 0;
+    if (budgetMs > 0 && typeof ns.expandUIWithBudget === 'function') {
+      await ns.expandUIWithBudget(budgetMs, section);
+    } else {
+      await expandIfPossible();
+    }
+    const fnName = SECTION_EXTRACTORS[section];
+    if (!fnName || typeof ns[fnName] !== 'function') return undefined;
+    try {
+      return ns[fnName]();
+    } catch (e) {
+      console.error('[lnp] extractSection error', section, e);
+      return undefined;
+    }
   }
 
-  // Chrome runtime message
-  if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+  // Chrome runtime message (guard: programmatic re-inject via
+  // chrome.scripting must not register duplicate listeners).
+  if (
+    typeof chrome !== 'undefined' &&
+    chrome.runtime?.onMessage &&
+    !window.__LNP_CS_MESSAGE_ROUTER__
+  ) {
+    window.__LNP_CS_MESSAGE_ROUTER__ = true;
     chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+      if (msg?.type === 'PING_LNP') {
+        // Lightweight readiness probe used by the popup and by the
+        // background orchestrator right after opening a details tab.
+        sendResponse({ ok: true });
+        return false;
+      }
       if (msg?.type === 'EXTRACT_PROFILE') {
         (async () => {
           try {
             const data = await extractAll(msg);
-            LNP_printTable(data);
             sendResponse(data);
           } catch (e) {
             console.error('Extraction error', e);
@@ -206,67 +271,46 @@
         })();
         return true;
       }
+      if (msg?.type === 'EXTRACT_SECTION') {
+        (async () => {
+          try {
+            const rawValue = await extractSection(msg);
+            const value =
+              typeof ns.sanitizeExportPayload === 'function'
+                ? ns.sanitizeExportPayload(rawValue)
+                : rawValue;
+            const response = { ok: true, section: msg.section, value };
+            sendResponse(response);
+          } catch (e) {
+            console.error('[lnp] EXTRACT_SECTION error', e);
+            sendResponse({
+              ok: false,
+              section: msg.section,
+              error: String(e),
+            });
+          }
+        })();
+        return true;
+      }
     });
   }
 
-  // Window bridge
-  window.addEventListener('message', async (e) => {
-    if (e.source !== window) return;
-    if (e.data?.type !== '__LNP_EXTRACT_REQ') return;
-    try {
-      const data = await extractAll({ tabUrl: location.href });
-      window.postMessage({ type: '__LNP_EXTRACT_RES', payload: data }, '*');
-      LNP_printTable(data);
-    } catch (err) {
-      console.error('extract error', err);
-    }
-  });
-
-  // Dev helpers
   window.__LNP_extractAll = extractAll;
-  window.LNP_table = async function () {
-    const data = await extractAll({ tabUrl: location.href });
-    LNP_printTable(data);
-    return data;
-  };
-
-  // Inject page-level APIs so console Top can call linkedin_ats_test()
-  (function installPageAPIs() {
-    try {
-      if (window.__lnp_page_api_installed__) return;
-      const hookUrl = chrome.runtime.getURL('page-hook.js'); // declared in web_accessible_resources
-
-      const s = document.createElement('script');
-      s.src = hookUrl;
-      s.async = false;
-      s.onload = function () {
-        this.remove();
-        window.__lnp_page_api_installed__ = true;
-        console.debug('[lnp] content: page API injected via page-hook.js');
-      };
-      (document.documentElement || document.head || document.body).appendChild(
-        s
-      );
-    } catch (e) {
-      console.error('[lnp] content: failed to install page API', e);
-    }
-  })();
 })();
 
-// --- START_EXPORT handler
-if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+// --- START_EXPORT handler (separate listener; guard against re-inject)
+if (
+  typeof chrome !== 'undefined' &&
+  chrome.runtime?.onMessage &&
+  !window.__LNP_CS_START_EXPORT__
+) {
+  window.__LNP_CS_START_EXPORT__ = true;
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg?.type === 'START_EXPORT') {
       (async () => {
         try {
-          // console.log(
-          //   '[content] START_EXPORT received. Settings:',
-          //   msg.settings
-          // );
-
           // 1) Extract
           const data = await window.__LNP_extractAll({ tabUrl: location.href });
-          // console.log('[content] Extracted payload:', data);
 
           // 2) Store (use callback, not await)
           const nonce = `lnp_${Date.now()}_${Math.random()
@@ -282,17 +326,10 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
               return;
             }
 
-            // console.log(
-            //   '[content] Stored payload under nonce:',
-            //   nonce,
-            //   payload
-            // );
-
             // 3) Open print page AFTER storage write is done
             const printUrl = chrome.runtime.getURL(
-              `src/print/print.html?nonce=${encodeURIComponent(nonce)}`
+              `src/print/print.html?nonce=${encodeURIComponent(nonce)}`,
             );
-            // console.log('[content] Opening print page:', printUrl);
             window.open(printUrl, '_blank', 'noopener');
 
             sendResponse({ ok: true, nonce });

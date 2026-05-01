@@ -1,45 +1,29 @@
 // src/content/about.js
-(function (ns) {
-  // Local, self-contained utilities (no external deps)
-  const Q = (sel, root = document) => root.querySelector(sel);
-  const QA = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-  const T = (el) => ((el && el.textContent) || '').trim();
-  const norm = (s) => (s ? s.replace(/\s+/g, ' ').trim() : s);
+//
+// Extracts the About section text. The 2026 LinkedIn DOM renders the
+// expandable "... more" indicator as a positioned <button> overlay with
+// `data-testid="expandable-text-button"`; the FULL text is always
+// already in the DOM. So we just need to walk the section text while
+// excluding any control nodes, then strip locale-specific "see more"
+// trailers as a defense in depth.
+//
+// Legacy DOM is also supported via `inline-show-more-text` containers.
 
-  // Prefer the node LinkedIn marks as presentable; they often duplicate with aria-hidden
-  function pickVisibleText(nodes) {
-    const arr = Array.from(nodes || []);
-    const ariaHiddenTrue = arr.find(
-      (n) => n.getAttribute && n.getAttribute('aria-hidden') === 'true'
-    );
-    return T(ariaHiddenTrue || arr[0] || null);
-  }
+(function () {
+  const ns = (window.__LNP_NS__ = window.__LNP_NS__ || {});
 
-  // Remove “see more/show more/mostrar más” artifacts (with/without ellipsis)
-  function stripSeeMore(s) {
-    if (!s) return s;
-    return s
-      .replace(/\u2026?\s*see more/gi, '')
-      .replace(/\u2026?\s*show more/gi, '')
-      .replace(/\u2026?\s*mostrar m[aá]s/gi, '')
-      .replace(/\s*\.\.\.\s*$/, '')
-      .trim();
-  }
-
-  // Remove sentence-level duplicates and collapse “texttext” pattern
+  // Sentence-level dedupe to collapse "TextText" patterns LinkedIn
+  // sometimes ships in screen-reader copies.
   function dedupeSentences(s) {
     if (!s) return s;
-
-    // Split on sentence boundaries (., !, ?) or newlines
+    const norm = ns.norm;
     const rawParts = s
       .split(/(?<=[.!?])\s+|\n+/)
       .map((x) => norm(x))
       .filter(Boolean);
-
     const out = [];
     const seen = new Set();
     for (let part of rawParts) {
-      // Collapse “texttext”
       if (part.length % 2 === 0) {
         const half = part.slice(0, part.length / 2);
         if (half && part === half + half) part = half;
@@ -53,53 +37,47 @@
     return out.join(' ');
   }
 
-  function hasHeader(sec, re) {
-    const h = sec.querySelector('h2, h3, header h2, header h3');
-    return re.test((h && h.textContent) || '');
-  }
-
-  function findSection(re) {
-    const sections = QA("section, main section, div[role='region']");
-    return sections.find((sec) => hasHeader(sec, re));
-  }
-
   ns.extractAbout = function extractAbout() {
-    // 1) Locate the About section (avoid capturing the title node)
-    const sec =
-      findSection(/about/i) || Q('section[id*="about"], div[id*="about"]');
+    const sec = ns.getSectionRoot
+      ? ns.getSectionRoot('about')
+      : ns.findSection && ns.findSection(/about/i);
 
     if (!sec) return undefined;
 
-    // 2) Likely content containers; prioritize inline-show-more-text
-    const candidates = [
-      sec.querySelector('.inline-show-more-text'),
-      sec.querySelector('div.display-flex.full-width'),
-      sec.querySelector('div:not(:has(h2,h3))'),
-      sec.querySelector('p'),
-    ].filter(Boolean);
+    // Preferred path: visible text minus controls. Works on 2026 SDUI
+    // where the section has an aria-hidden truncation button overlaid
+    // on top of the actual text.
+    let txt = ns.sectionVisibleText ? ns.sectionVisibleText(sec) : '';
 
-    if (!candidates.length) return undefined;
-
-    // 3) Extract visible text (avoid the duplicate accessibility copy)
-    let raw = '';
-    const node = candidates[0];
-
-    // inline-show-more-text usually contains multiple spans
-    const innerSpans = node ? node.querySelectorAll('span') : null;
-    if (innerSpans && innerSpans.length) {
-      raw = pickVisibleText(innerSpans);
-    } else {
-      raw = T(node);
+    // Legacy path: inline-show-more-text wrapper carries both the
+    // visible span and an aria-hidden mirror; pickVisibleText handles
+    // both shapes. Only consulted when the SDUI walk came up empty.
+    if (!txt) {
+      const node =
+        sec.querySelector('.inline-show-more-text') ||
+        sec.querySelector('div.display-flex.full-width') ||
+        sec.querySelector('p');
+      if (node) {
+        const innerSpans = node.querySelectorAll('span');
+        if (innerSpans && innerSpans.length) {
+          txt = ns.pickVisibleText(innerSpans);
+        } else {
+          txt = ns.T(node);
+        }
+      }
     }
 
-    // 4) Clean noise and duplicates
-    let txt = norm(raw);
-    txt = stripSeeMore(txt);
-    txt = dedupeSentences(txt);
+    txt = ns.norm(txt);
+    txt = ns.stripSeeMore ? ns.stripSeeMore(txt) : txt;
 
-    // 5) Ensure the header “About” isn’t glued to the text
-    txt = txt.replace(/^about\s*/i, '').trim();
+    // Strip the leading section header so it does not leak into the
+    // body text ("AboutI hold a degree..." -> "I hold a degree...").
+    txt = txt.replace(/^about\s*/i, '');
+    txt = txt.replace(/^acerca de\s*/i, '');
+    txt = txt.replace(/^sobre\s*/i, '');
+
+    txt = dedupeSentences(txt);
 
     return txt || undefined;
   };
-})(window.__LNP_NS__ || (window.__LNP_NS__ = {}));
+})();

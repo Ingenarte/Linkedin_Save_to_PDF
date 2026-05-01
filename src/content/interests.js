@@ -3,12 +3,16 @@
   const ns = (window.__lnp = window.__lnp || {});
   ns.extractInterests = function extractInterests() {
     const { findSection, QA, T, norm } = ns;
-    const sec = findSection(/interests/i);
+    const rootResolver = ns.getSectionRoot || findSection;
+    const sec = rootResolver({
+      key: 'interests',
+      heading: /interests|intereses/i,
+    });
     if (!sec) return undefined;
     const names = new Set();
     QA(
       "a[href*='/in/'], a[href*='/company/'], a[href*='/groups/']",
-      sec
+      sec,
     ).forEach((a) => {
       const s = norm(T(a));
       if (!s) return;

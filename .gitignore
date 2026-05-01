@@ -1,0 +1,24 @@
+# Node / tooling
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Build artifacts
+dist/
+*.zip
+
+# Local release audit; keep out of repository and Chrome Web Store ZIP.
+AUDIT_REPORT.md
+
+# Local Chrome profiles must never be committed.
+.chrome-e2e-profile/
+
+/tmp/dom-map.json

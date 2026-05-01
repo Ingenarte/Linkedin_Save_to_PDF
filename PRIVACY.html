@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -6,7 +6,12 @@
     <title>Privacy Policy — LinkedIn Save to PDF</title>
     <style>
       body {
-        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        font-family:
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
         line-height: 1.6;
         max-width: 800px;
         margin: 40px auto;
@@ -47,7 +52,7 @@
   </head>
   <body>
     <h1>Privacy Policy — LinkedIn Save to PDF (Unofficial by Ingenarte)</h1>
-    <p><em>Last updated: August 16, 2025</em></p>
+    <p><em>Last updated: May 1, 2026</em></p>
 
     <h2>1. Data Collection</h2>
     <p>
@@ -66,6 +71,16 @@
         The extension extracts profile information from the active LinkedIn tab.
       </li>
       <li>
+        If <strong>Full Profile export</strong> is confirmed by the user, the
+        extension additionally opens each selected section's
+        <code>/in/&lt;slug&gt;/details/&lt;section&gt;/</code> sub-page (of the
+        same profile you are currently viewing) in a temporary background tab,
+        extracts the full list, and immediately closes the tab. Sub-pages are
+        visited <strong>serially</strong> with a short throttle between them.
+        Full Profile export is <strong>opt-in</strong> and requires
+        confirmation.
+      </li>
+      <li>
         Data is temporarily stored in <code>chrome.storage.local</code> to
         transfer it to the print view.
       </li>
@@ -77,8 +92,12 @@
 
     <h2>3. External Requests</h2>
     <p>
-      The extension does <strong>not</strong> make any network requests to
-      external servers. It works entirely offline once loaded.
+      The extension does <strong>not</strong> make programmatic network requests
+      to external servers. The only network activity it triggers is loading
+      LinkedIn sub-pages of the profile you are already viewing, in the same way
+      your own browser does when you click on "Show all". If profile photos are
+      enabled, the print page renders the image URL already present in the
+      LinkedIn page.
     </p>
 
     <h2>4. Permissions Usage</h2>
@@ -89,7 +108,18 @@
       </li>
       <li>
         <code>storage</code> — Used only for short-term data transfer between
-        scripts; cleared immediately after printing.
+        scripts and for user settings; profile export data is cleared
+        immediately after printing.
+      </li>
+      <li>
+        <code>scripting</code> — Used only after a user action to recover the
+        declared content script on LinkedIn tabs opened before install or
+        update.
+      </li>
+      <li>
+        <code>tabs</code> — Used for the opt-in Full Profile export to open,
+        monitor, restore focus from, and close same-profile LinkedIn detail
+        tabs.
       </li>
     </ul>
 
@@ -113,6 +143,6 @@
       LinkedIn® is a registered trademark of LinkedIn Corporation.
     </p>
 
-    <footer>&copy; 2025 Ingenarte. All rights reserved.</footer>
+    <footer>&copy; 2025–2026 Ingenarte. All rights reserved.</footer>
   </body>
 </html>

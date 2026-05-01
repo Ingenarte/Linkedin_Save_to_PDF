@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
@@ -6,7 +6,28 @@
     <link rel="stylesheet" href="./popup.css" />
   </head>
   <body>
-    <h3 class="title">LinkedIn Save to PDF</h3>
+    <div class="app-header">
+      <span class="app-header__spacer" aria-hidden="true"></span>
+      <h3 class="title">LinkedIn Save to PDF</h3>
+      <label class="switch" title="Dark mode">
+        <span class="switch__label">
+          <svg
+            class="switch__icon"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"></path>
+          </svg>
+          Dark mode
+        </span>
+        <input type="checkbox" id="headerDarkToggle" />
+        <span class="switch__track" aria-hidden="true">
+          <span class="switch__thumb"></span>
+        </span>
+      </label>
+    </div>
 
     <!-- Nav -->
     <nav class="tabs">
@@ -77,15 +98,117 @@
 
     <!-- View: Main -->
     <section id="view-main" class="view is-active">
-      <div class="center center--top">
-        <button id="exportBtn" class="btn">Export to PDF</button>
+      <div id="profileBadge" class="profile-badge" hidden aria-live="polite">
+        <div class="profile-badge__avatar" aria-hidden="true"></div>
+        <div class="profile-badge__body">
+          <div id="profileBadgeName" class="profile-badge__name">
+            LinkedIn profile
+          </div>
+          <div id="profileBadgeUrl" class="profile-badge__url"></div>
+        </div>
+        <span id="profileBadgeState" class="profile-badge__state"
+          >on profile</span
+        >
       </div>
+
+      <div class="center center--top lnp-main-actions">
+        <button type="button" id="exportPdf1PageBtn" class="btn action-button">
+          <span class="action-button__title">Export 1-page PDF</span>
+          <span class="action-button__subtitle"
+            >Fast summary from the profile root</span
+          >
+        </button>
+        <button
+          type="button"
+          id="exportPdfFullProfileBtn"
+          class="btn action-button action-button--secondary"
+        >
+          <span class="action-button__title">Export Full Profile PDF</span>
+          <span class="action-button__subtitle"
+            >Merge selected detail sections</span
+          >
+        </button>
+      </div>
+
+      <p
+        class="hint hint--center"
+        style="margin-top: 8px; font-size: 11px; text-align: left"
+      >
+        1-page reads only the open profile tab. <br />Full Profile asks first,
+        then opens same-profile LinkedIn detail tabs temporarily and closes them
+        after merging the selected sections.
+      </p>
 
       <div id="progress" class="progress" aria-hidden="true">
         <div class="progress__bar"></div>
       </div>
 
       <p id="status" class="hint"></p>
+
+      <div
+        id="deepExportPanel"
+        class="deep-export-panel"
+        hidden
+        aria-live="polite"
+      >
+        <p class="deep-export-panel__warn">
+          Full Profile export runs locally in your browser. Keep Chrome and the
+          original LinkedIn profile tab open until the temporary detail tabs
+          finish.
+        </p>
+        <p id="deepExportStep" class="deep-export-panel__step"></p>
+        <p id="deepExportCountdown" class="deep-export-panel__countdown"></p>
+        <button
+          type="button"
+          id="cancelDeepExportBtn"
+          class="btn btn--danger btn--small deep-export-panel__cancel"
+        >
+          Cancel Full Profile Export
+        </button>
+      </div>
+
+      <div
+        id="deepExportConfirmModal"
+        class="confirm-modal"
+        hidden
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deepExportConfirmTitle"
+      >
+        <div class="confirm-modal__card">
+          <h4 id="deepExportConfirmTitle" class="confirm-modal__title">
+            Start Full Profile export?
+          </h4>
+          <p class="confirm-modal__body">This can take about 45 seconds.</p>
+          <p class="confirm-modal__body">
+            The extension will open temporary same-profile LinkedIn detail tabs
+            and merge complete selected sections.
+          </p>
+          <p class="confirm-modal__body">
+            When it finishes, Chrome will open the printer dialog.
+          </p>
+          <p class="confirm-modal__body">
+            You can cancel while it is running. Keep Chrome and the original
+            profile tab open.
+          </p>
+          <div class="confirm-modal__actions">
+            <button
+              type="button"
+              id="cancelDeepConfirmBtn"
+              class="btn btn--ghost"
+            >
+              Not now
+            </button>
+            <button
+              type="button"
+              id="confirmDeepExportBtn"
+              class="btn btn--danger"
+            >
+              Start Full Profile PDF
+            </button>
+          </div>
+        </div>
+      </div>
 
       <!-- Preview -->
       <!-- <div id="preview" class="preview" hidden>
@@ -100,27 +223,7 @@
         </section>
       </div> -->
 
-      <div class="hint">
-        Author:
-        <a href="https://www.linkedin.com/in/fmrodrigo/" target="_blank">
-          Franco Mariano Rodrigo
-        </a>
-        · <a href="https://www.ingenarte.com" target="_blank">Ingenarte</a> ·
-        <a
-          href="https://github.com/Ingenarte/Linkedin_Save_to_PDF"
-          target="_blank"
-          >GitHub</a
-        >
-
-        <!-- New line for reporting errors -->
-        <br />
-        <a
-          href="https://github.com/Ingenarte/Linkedin_Save_to_PDF/issues"
-          target="_blank"
-          style="display: inline-block; margin-left: 0em"
-          >Report Issues</a
-        >
-      </div>
+      <p class="hint hint--center">Open the Info tab for Chrome print tips.</p>
     </section>
 
     <!-- View: Settings -->
@@ -131,67 +234,102 @@
         <div class="grid">
           <label class="row">
             <input type="checkbox" name="profileHeader" />
+            <span class="section-toggle" aria-hidden="true">
+              <span class="section-toggle__thumb"></span>
+            </span>
             <span>Profile Header (name, headline, location, export date)</span>
           </label>
 
           <label class="row">
             <input type="checkbox" name="withPhoto" />
+            <span class="section-toggle" aria-hidden="true">
+              <span class="section-toggle__thumb"></span>
+            </span>
             <span>Include profile photo</span>
           </label>
 
           <label class="row">
             <input type="checkbox" name="contact" />
+            <span class="section-toggle" aria-hidden="true">
+              <span class="section-toggle__thumb"></span>
+            </span>
             <span>Contact</span>
           </label>
 
           <label class="row">
             <input type="checkbox" name="about" />
+            <span class="section-toggle" aria-hidden="true">
+              <span class="section-toggle__thumb"></span>
+            </span>
             <span>Summary (About)</span>
           </label>
 
           <label class="row">
             <input type="checkbox" name="experience" />
+            <span class="section-toggle" aria-hidden="true">
+              <span class="section-toggle__thumb"></span>
+            </span>
             <span>Experience</span>
           </label>
 
           <label class="row">
             <input type="checkbox" name="education" />
+            <span class="section-toggle" aria-hidden="true">
+              <span class="section-toggle__thumb"></span>
+            </span>
             <span>Education</span>
           </label>
 
           <label class="row">
             <input type="checkbox" name="certifications" />
+            <span class="section-toggle" aria-hidden="true">
+              <span class="section-toggle__thumb"></span>
+            </span>
             <span>Certifications</span>
           </label>
 
           <label class="row">
             <input type="checkbox" name="skills" />
+            <span class="section-toggle" aria-hidden="true">
+              <span class="section-toggle__thumb"></span>
+            </span>
             <span>Top Skills</span>
           </label>
 
           <label class="row">
             <input type="checkbox" name="languages" />
+            <span class="section-toggle" aria-hidden="true">
+              <span class="section-toggle__thumb"></span>
+            </span>
             <span>Languages</span>
           </label>
 
           <label class="row">
             <input type="checkbox" name="honors" />
+            <span class="section-toggle" aria-hidden="true">
+              <span class="section-toggle__thumb"></span>
+            </span>
             <span>Honors & Awards</span>
           </label>
 
           <label class="row">
             <input type="checkbox" name="publications" />
+            <span class="section-toggle" aria-hidden="true">
+              <span class="section-toggle__thumb"></span>
+            </span>
             <span>Publications</span>
           </label>
 
           <label class="row">
             <input type="checkbox" name="interests" />
+            <span class="section-toggle" aria-hidden="true">
+              <span class="section-toggle__thumb"></span>
+            </span>
             <span>Interests</span>
           </label>
         </div>
 
         <div class="actions">
-          <button type="submit" class="btn">Save</button>
           <button type="button" id="resetBtn" class="btn btn--ghost">
             Reset defaults
           </button>
@@ -215,6 +353,41 @@
         the extension.
       </p>
     </section>
+
+    <footer class="app-footer">
+      <p class="app-footer__line">
+        Author:
+        <a
+          href="https://www.linkedin.com/in/fmrodrigo/"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Franco Mariano Rodrigo</a
+        >
+        ·
+        <a
+          href="https://www.ingenarte.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Ingenarte</a
+        >
+        ·
+        <a
+          href="https://github.com/Ingenarte/Linkedin_Save_to_PDF"
+          target="_blank"
+          rel="noopener noreferrer"
+          >GitHub</a
+        >
+        · v<span id="footer-version">—</span>
+      </p>
+      <p class="app-footer__line app-footer__line--second">
+        <a
+          href="https://github.com/Ingenarte/Linkedin_Save_to_PDF/issues"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Report issues</a
+        >
+      </p>
+    </footer>
 
     <script src="./popup.js"></script>
   </body>

@@ -86,13 +86,26 @@
   function renderCertifications(root, data) {
     if (!data.certifications?.length) return;
     const s = section('Certifications');
+    let appended = 0;
     data.certifications.forEach((lc) => {
       const div = el('div', 'item');
       const head = [lc.name, lc.issuer].filter(Boolean).join(' — ');
       if (head) div.append(el('div', 'role', head));
       if (lc.issued) div.append(el('div', 'meta', `Issued ${lc.issued}`));
-      if (norm(div.textContent)) s.append(div);
+      if (norm(div.textContent)) {
+        s.append(div);
+        appended++;
+      }
     });
+    if (!appended) {
+      s.append(
+        el(
+          'p',
+          '',
+          'Certification rows were present in the export but had no printable title or issuer.',
+        ),
+      );
+    }
     root.append(s);
   }
 

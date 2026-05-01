@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "LinkedIn Save to PDF (Ingenarte)",
   "short_name": "LinkedIn PDF",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Export a clean, print-ready view of your LinkedIn profile as PDF",
   "homepage_url": "https://github.com/Ingenarte/Linkedin_Save_to_PDF",
   "action": {
@@ -14,12 +14,16 @@
     "48": "public/icons/icon48.png",
     "128": "public/icons/icon128.png"
   },
-  "permissions": ["storage", "activeTab"],
+  "permissions": ["storage", "activeTab", "scripting", "tabs"],
   "host_permissions": ["https://*.linkedin.com/*"],
+  "background": {
+    "service_worker": "src/background.js"
+  },
   "content_scripts": [
     {
       "matches": [
         "https://*.linkedin.com/in/*",
+        "https://*.linkedin.com/in/*/details/*",
         "https://*.linkedin.com/profile/*"
       ],
       "js": [
@@ -37,9 +41,6 @@
         "src/content/languages.js",
         "src/content/honors.js",
         "src/content/interests.js",
-        "src/content/printTable.js",
-        "src/content/bridge.js",
-        "src/content/extractATS.js",
         "src/content/content.js"
       ],
       "run_at": "document_idle"
@@ -54,8 +55,7 @@
         "src/print/print-render-header.js",
         "src/print/print-render-sections.js",
         "src/print/print-finalize.js",
-        "src/print/print-main.js",
-        "page-hook.js"
+        "src/print/print-main.js"
       ],
       "matches": ["https://*.linkedin.com/*"]
     }

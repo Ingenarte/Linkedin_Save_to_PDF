@@ -9,6 +9,9 @@
       const node = walker.currentNode;
       const parent = node.parentElement;
       if (parent && parent.closest('a')) continue;
+      const section = parent && parent.closest('section');
+      const heading = section && section.querySelector('h2');
+      if (heading && heading.textContent.trim() === 'Languages') continue;
 
       const raw = node.nodeValue || '';
       if (!raw.trim()) continue;
