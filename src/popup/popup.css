@@ -713,6 +713,20 @@ body.dark .deep-export-panel__warn {
   margin-top: 10px;
 }
 
+.deep-export-panel.deep-export-panel--active {
+  animation: lnpDeepPanelPulse 2.4s ease-in-out infinite;
+  border-color: rgba(10, 102, 194, 0.55);
+}
+@keyframes lnpDeepPanelPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(10, 102, 194, 0.12);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(10, 102, 194, 0.18);
+  }
+}
+
 .confirm-modal {
   position: fixed;
   inset: 0;

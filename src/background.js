@@ -84,7 +84,6 @@ const LNP_CONTENT_SCRIPT_FILES = [
   'src/content/skills.js',
   'src/content/languages.js',
   'src/content/honors.js',
-  'src/content/interests.js',
   'src/content/content.js',
 ];
 
@@ -436,6 +435,49 @@ function sendMessageToTab(tabId, message) {
   });
 }
 
+/** Full-width busy banner on the profile tab (main frame only) during deep export. */
+function sendMessageToTabMainFrame(tabId, message) {
+  return new Promise((resolve, reject) => {
+    try {
+      chrome.tabs.sendMessage(tabId, message, { frameId: 0 }, (resp) => {
+        const err = chrome.runtime.lastError;
+        if (err) {
+          reject(new Error(err.message || 'sendMessage failed'));
+          return;
+        }
+        resolve(resp);
+      });
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+async function notifyDeepExportPageBusyOverlay(tabId, action) {
+  if (tabId == null) return;
+  await sendMessageToTabMainFrame(tabId, {
+    type: 'DEEP_EXPORT_BUSY_OVERLAY',
+    action,
+  });
+}
+
+function sendMessageToTabWithTimeout(tabId, message, timeoutMs) {
+  return Promise.race([
+    sendMessageToTab(tabId, message),
+    new Promise((_, reject) =>
+      setTimeout(
+        () =>
+          reject(
+            new Error(
+              `tabs.sendMessage timed out after ${timeoutMs}ms (content script stuck or wrong extension build — reload the LinkedIn tab and chrome://extensions for this repo).`,
+            ),
+          ),
+        timeoutMs,
+      ),
+    ),
+  ]);
+}
+
 // Probes the content script with PING_LNP until it responds or the
 // retry budget is exhausted. Covers the brief window between "tab
 // complete" and the content script registering its onMessage listener.
@@ -495,6 +537,30 @@ async function waitForTabAtUrl(tabId, expectedUrlPrefix, timeoutMs) {
   throw new Error(`Profile root navigation timed out.${finalUrl}`);
 }
 
+/**
+ * Serialize extension export work per tab (single-page PDF, deep export kickoff, …).
+ * Overlapping automation / UI paths on the same LinkedIn tab cause Chrome messaging
+ * failures ("The message port closed before a response was received").
+ */
+const lnpSerializedTabChains = new Map();
+
+function enqueueSerializedTabWork(tabId, task) {
+  const key = String(tabId);
+  const tail = lnpSerializedTabChains.get(key) || Promise.resolve();
+  const job = tail.catch(() => {}).then(() => task());
+  lnpSerializedTabChains.set(key, job);
+  void job.finally(() => {
+    if (lnpSerializedTabChains.get(key) === job) {
+      lnpSerializedTabChains.delete(key);
+    }
+  });
+  return job;
+}
+
+function runSinglePageExportSerialized(tabId, settings) {
+  return enqueueSerializedTabWork(tabId, () => runSinglePageExport(tabId, settings));
+}
+
 async function runSinglePageExport(tabId, settings) {
   const tab = await chrome.tabs.get(tabId);
   const route = getLinkedInProfileRoute(tab?.url);
@@ -507,10 +573,29 @@ async function runSinglePageExport(tabId, settings) {
     await sleep(SINGLE_PAGE_ROOT_SETTLE_MS);
   }
   await ensureContentScript(tabId);
-  return sendMessageToTab(tabId, {
-    type: 'START_EXPORT',
-    settings,
+  const resp = await sendMessageToTabWithTimeout(
+    tabId,
+    {
+      type: 'START_EXPORT',
+      settings,
+    },
+    120000,
+  );
+  if (!resp || !resp.ok || !resp.nonce) {
+    throw new Error(String(resp?.error || 'START_EXPORT failed'));
+  }
+
+  const printUrl = chrome.runtime.getURL(
+    `src/print/print.html?nonce=${encodeURIComponent(resp.nonce)}`,
+  );
+  await new Promise((resolve, reject) => {
+    chrome.tabs.create({ url: printUrl, active: true }, () => {
+      const err = chrome.runtime.lastError;
+      if (err) reject(new Error(err.message));
+      else resolve();
+    });
   });
+  return resp;
 }
 
 async function normalizeProfileRootTab(tabId) {
@@ -619,7 +704,9 @@ async function fetchDeepSection(
   const expectedPrefix = url;
   const label = DEEP_SECTION_LABELS[section] || section;
   const activeRetrySection =
-    section === 'experience' || section === 'education' || section === 'languages';
+    section === 'experience' ||
+    section === 'education' ||
+    section === 'languages';
   const timing = deepSectionTiming(section);
 
   let tabId;
@@ -668,7 +755,7 @@ async function fetchDeepSection(
         budgetMs: timing.budgetMs,
       });
 
-    let resp = await runExtract();
+    const resp = await runExtract();
     assertDeepJobActive(job, runToken);
     if (!resp || !resp.ok) {
       throw new Error(resp?.error || 'EXTRACT_SECTION returned no data');
@@ -953,9 +1040,11 @@ async function openPrintView(data, settings, job, runToken) {
 
 async function runDeepExportJob(job) {
   const runToken = job.runToken;
+  const overlayTabId = job.originalTabId;
   try {
     assertDeepJobActive(job, runToken);
     await updateDeepJob(job, { status: 'running', phase: 'starting' });
+    await notifyDeepExportPageBusyOverlay(overlayTabId, 'show').catch(() => {});
     const {
       merged,
       improvedSections,
@@ -1029,13 +1118,165 @@ async function runDeepExportJob(job) {
       improvedSections: [],
       sectionsPlanned: 0,
     });
+  } finally {
+    await notifyDeepExportPageBusyOverlay(overlayTabId, 'hide').catch(() => {});
   }
 }
 
 // --------------------------------------------------------------------
+// Export settings (sync with popup DEFAULT_SETTINGS + lnp_settings_v1)
+// --------------------------------------------------------------------
+const DEFAULT_EXPORT_SETTINGS = {
+  profileHeader: true,
+  contact: true,
+  withPhoto: true,
+  about: true,
+  experience: true,
+  education: true,
+  certifications: true,
+  skills: true,
+  languages: true,
+  honors: true,
+  publications: true,
+};
+
+const SETTINGS_STORAGE_KEY = 'lnp_settings_v1';
+
+async function loadExportSettings() {
+  return new Promise((resolve, reject) => {
+    try {
+      chrome.storage.sync.get(SETTINGS_STORAGE_KEY, (obj) => {
+        const err = chrome.runtime.lastError;
+        if (err) {
+          reject(new Error(err.message));
+          return;
+        }
+        resolve({ ...DEFAULT_EXPORT_SETTINGS, ...(obj[SETTINGS_STORAGE_KEY] || {}) });
+      });
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+/**
+ * Forces every export section checkbox to ON in sync storage so the popup,
+ * print pipeline, and deep-export planner match full-profile automation.
+ * Preserves non-export keys already stored under lnp_settings_v1 (e.g. darkMode).
+ */
+async function persistAllExportSectionTogglesOn() {
+  return new Promise((resolve, reject) => {
+    try {
+      chrome.storage.sync.get(SETTINGS_STORAGE_KEY, (obj) => {
+        const err = chrome.runtime.lastError;
+        if (err) {
+          reject(new Error(err.message));
+          return;
+        }
+        const prev = obj[SETTINGS_STORAGE_KEY] || {};
+        const next = { ...prev };
+        for (const k of Object.keys(DEFAULT_EXPORT_SETTINGS)) {
+          next[k] = true;
+        }
+        next.profileHeader = true;
+        next.withPhoto = true;
+        chrome.storage.sync.set({ [SETTINGS_STORAGE_KEY]: next }, () => {
+          const err2 = chrome.runtime.lastError;
+          if (err2) reject(new Error(err2.message));
+          else resolve();
+        });
+      });
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+function assertAllExportSectionTogglesOn(settings) {
+  const merged = { ...DEFAULT_EXPORT_SETTINGS, ...(settings || {}) };
+  const off = Object.keys(DEFAULT_EXPORT_SETTINGS).filter((k) => !merged[k]);
+  if (off.length) {
+    throw new Error(
+      `Full-info automation requires all section toggles ON; off: ${off.join(', ')}`,
+    );
+  }
+}
+
+function isLinkedInProfileUrlForCommand(url) {
+  return /^https:\/\/([a-z0-9.-]+\.)?linkedin\.com\/(in|profile)\//i.test(
+    String(url || ''),
+  );
+}
+
+async function startDeepExportCore(originalTabId, slugHint, settingsInput, skipPrint) {
+  await pruneOldDeepJobs();
+  const rootProfile = await normalizeProfileRootTab(originalTabId);
+  let settings = settingsInput;
+  if (
+    settings == null ||
+    (typeof settings === 'object' && Object.keys(settings).length === 0)
+  ) {
+    settings = await loadExportSettings();
+  }
+  const now = Date.now();
+  const job = {
+    jobId: createDeepJobId(),
+    runToken: createDeepRunToken(),
+    status: 'queued',
+    phase: 'queued',
+    originalTabId: rootProfile.tabId,
+    slug: rootProfile.slug || slugHint,
+    settings,
+    skipPrint: !!skipPrint,
+    cancelRequested: false,
+    currentTabId: undefined,
+    openedTabIds: [],
+    improvedSections: [],
+    sectionsPlanned: 0,
+    plannedSections: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+  await persistDeepJob(job);
+  void runDeepExportJob(job);
+  return job;
+}
+
+function startDeepExportCoreSerialized(originalTabId, slugHint, settingsInput, skipPrint) {
+  return enqueueSerializedTabWork(originalTabId, () =>
+    startDeepExportCore(originalTabId, slugHint, settingsInput, skipPrint),
+  );
+}
+
+chrome.commands.onCommand.addListener((command) => {
+  void (async () => {
+    try {
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tab = tabs[0];
+      if (!tab?.id || !isLinkedInProfileUrlForCommand(tab.url)) {
+        console.warn(
+          '[lnp] keyboard export skipped — active tab is not a LinkedIn profile',
+          tab?.url,
+        );
+        return;
+      }
+      if (command === 'lnp-export-single-page') {
+        const settings = await loadExportSettings();
+        await runSinglePageExportSerialized(tab.id, settings);
+      } else if (command === 'lnp-export-full-profile') {
+        const settings = await loadExportSettings();
+        await startDeepExportCoreSerialized(tab.id, undefined, settings, false);
+      }
+    } catch (e) {
+      console.error('[lnp] commands.onCommand failed', command, e);
+    }
+  })();
+});
+
+// --------------------------------------------------------------------
 // Message router
 // --------------------------------------------------------------------
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg?.type === 'GET_DEEP_EXPORT_JOB') {
     (async () => {
       try {
@@ -1060,12 +1301,24 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 
   if (msg?.type === 'START_SINGLE_PAGE_EXPORT') {
+    const keepAlive = setInterval(() => {
+      try {
+        chrome.runtime.getPlatformInfo(() => {});
+      } catch (_e) {
+        /* ignore */
+      }
+    }, 4000);
     (async () => {
       try {
-        const resp = await runSinglePageExport(msg.tabId, msg.settings || {});
+        const resp = await runSinglePageExportSerialized(
+          msg.tabId,
+          msg.settings || {},
+        );
         sendResponse(resp || { ok: true });
       } catch (e) {
         sendResponse({ ok: false, error: String(e?.message || e) });
+      } finally {
+        clearInterval(keepAlive);
       }
     })();
     return true;
@@ -1075,30 +1328,13 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
   (async () => {
     try {
-      await pruneOldDeepJobs();
-      const rootProfile = await normalizeProfileRootTab(msg.originalTabId);
-      const now = Date.now();
-      const job = {
-        jobId: createDeepJobId(),
-        runToken: createDeepRunToken(),
-        status: 'queued',
-        phase: 'queued',
-        originalTabId: rootProfile.tabId,
-        slug: rootProfile.slug || msg.slug,
-        settings: msg.settings || {},
-        skipPrint: !!msg.skipPrint,
-        cancelRequested: false,
-        currentTabId: undefined,
-        openedTabIds: [],
-        improvedSections: [],
-        sectionsPlanned: 0,
-        plannedSections: [],
-        createdAt: now,
-        updatedAt: now,
-      };
-      await persistDeepJob(job);
+      const job = await startDeepExportCoreSerialized(
+        msg.originalTabId,
+        msg.slug,
+        msg.settings,
+        msg.skipPrint,
+      );
       sendResponse({ ok: true, jobId: job.jobId, job: publicDeepJobState(job) });
-      runDeepExportJob(job);
     } catch (e) {
       console.error('[lnp] START_DEEP_EXPORT failed', e);
       emitDeepExportProgress({
@@ -1113,4 +1349,77 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   })();
 
   return true; // keep the channel open only for the quick job acknowledgement
+});
+
+// Playwright/CDP: content cannot use chrome.commands. `runtime.sendMessage` from
+// content is capped (~60s) before the port closes; long exports use `connect`.
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== 'lnp-full-info-automation') return;
+  const keepAlive = setInterval(() => {
+    try {
+      chrome.runtime.getPlatformInfo(() => {});
+    } catch (_e) {
+      /* ignore */
+    }
+  }, 4000);
+  const stopKeepAlive = () => {
+    clearInterval(keepAlive);
+  };
+  let started = false;
+  port.onMessage.addListener((msg) => {
+    if (started) return;
+    if (!msg || msg.type !== 'LNP_AUTOMATION_EXPORT') return;
+    started = true;
+    void (async () => {
+      try {
+        const tabId = port.sender?.tab?.id;
+        if (!tabId) {
+          port.postMessage({ ok: false, error: 'No sender tab' });
+          return;
+        }
+        const tab = await chrome.tabs.get(tabId);
+        if (!isLinkedInProfileUrlForCommand(tab.url)) {
+          port.postMessage({
+            ok: false,
+            error: 'Active tab is not a LinkedIn profile URL',
+          });
+          return;
+        }
+        // Align stored popup toggles with automation (all sections ON), then verify.
+        await persistAllExportSectionTogglesOn();
+        let settings;
+        if (msg.exportSettings && typeof msg.exportSettings === 'object') {
+          settings = { ...DEFAULT_EXPORT_SETTINGS, ...msg.exportSettings };
+        } else {
+          settings = await loadExportSettings();
+          Object.assign(settings, DEFAULT_EXPORT_SETTINGS);
+        }
+        assertAllExportSectionTogglesOn(settings);
+        if (msg.mode === 'single') {
+          await runSinglePageExportSerialized(tabId, settings);
+          port.postMessage({ ok: true });
+        } else if (msg.mode === 'deep') {
+          await startDeepExportCoreSerialized(tabId, undefined, settings, false);
+          // Brief yield so the service worker finishes microtasks before replying;
+          // some Chrome builds dropped the port if postMessage fired in the same turn
+          // as persistDeepJob + storage callbacks.
+          await new Promise((r) => setTimeout(r, 50));
+          port.postMessage({ ok: true });
+        } else {
+          port.postMessage({ ok: false, error: 'Invalid automation mode' });
+        }
+      } catch (e) {
+        try {
+          port.postMessage({ ok: false, error: String(e?.message || e) });
+        } catch (_postErr) {
+          /* ignore */
+        }
+      } finally {
+        // Do not call port.disconnect() from the service worker: it can race with
+        // postMessage delivery and surface as "The message port closed before a response
+        // was received" in the content script. The tab end disconnects after handling.
+        setTimeout(stopKeepAlive, 250);
+      }
+    })();
+  });
 });

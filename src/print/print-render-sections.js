@@ -155,13 +155,6 @@
     root.append(s);
   }
 
-  function renderInterests(root, data) {
-    if (!data.interests?.length) return;
-    const s = section('Interests');
-    s.append(list(data.interests));
-    root.append(s);
-  }
-
   window.__PRINT_RENDER_SECTIONS__ = {
     renderContact,
     renderAbout,
@@ -172,6 +165,5 @@
     renderLanguages,
     renderHonors,
     renderPublications,
-    renderInterests,
   };
 })();

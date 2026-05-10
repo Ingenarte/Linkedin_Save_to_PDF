@@ -49,7 +49,14 @@
 
   async function loadPrintSettings() {
     const { lnp_settings } = await chrome.storage.local.get('lnp_settings');
-    // Defaults if nothing was saved yet
+    let syncSettings = {};
+    try {
+      const sync = await chrome.storage.sync.get('lnp_settings_v1');
+      syncSettings = sync.lnp_settings_v1 || {};
+    } catch (_e) {
+      /* sync storage unavailable in some contexts */
+    }
+    // Defaults; merge legacy local key then popup Settings (sync v1).
     return Object.assign(
       {
         profileHeader: true,
@@ -63,9 +70,9 @@
         languages: true,
         honors: true,
         publications: true,
-        interests: true,
       },
-      lnp_settings || {}
+      lnp_settings || {},
+      syncSettings,
     );
   }
 

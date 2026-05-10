@@ -179,13 +179,17 @@
           <h4 id="deepExportConfirmTitle" class="confirm-modal__title">
             Start Full Profile export?
           </h4>
-          <p class="confirm-modal__body">This can take about 45 seconds.</p>
+          <p class="confirm-modal__body">This often takes about a minute.</p>
           <p class="confirm-modal__body">
             The extension will open temporary same-profile LinkedIn detail tabs
             and merge complete selected sections.
           </p>
           <p class="confirm-modal__body">
             When it finishes, Chrome will open the printer dialog.
+          </p>
+          <p class="confirm-modal__body">
+            If this Chrome popup closes, the export still continues in the
+            background until it finishes or you cancel from the toolbar again.
           </p>
           <p class="confirm-modal__body">
             You can cancel while it is running. Keep Chrome and the original
@@ -318,14 +322,6 @@
               <span class="section-toggle__thumb"></span>
             </span>
             <span>Publications</span>
-          </label>
-
-          <label class="row">
-            <input type="checkbox" name="interests" />
-            <span class="section-toggle" aria-hidden="true">
-              <span class="section-toggle__thumb"></span>
-            </span>
-            <span>Interests</span>
           </label>
         </div>
 

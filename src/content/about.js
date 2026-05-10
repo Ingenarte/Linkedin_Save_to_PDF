@@ -73,10 +73,20 @@
     // Strip the leading section header so it does not leak into the
     // body text ("AboutI hold a degree..." -> "I hold a degree...").
     txt = txt.replace(/^about\s*/i, '');
+    txt = txt.replace(/^summary\s*/i, '');
     txt = txt.replace(/^acerca de\s*/i, '');
     txt = txt.replace(/^sobre\s*/i, '');
+    txt = txt.replace(/^samenvatting\s*/i, '');
 
     txt = dedupeSentences(txt);
+
+    // LinkedIn sometimes concatenates the "Top skills" label and the first
+    // skill token in a single text run ("Top skillsReact.js …"). Insert a
+    // space so print/PDF text matches the visible UI spacing.
+    txt = txt.replace(
+      /(Top skills|Principales aptitudes|Habilidades principales)(?=[A-Za-zÀ-ÿ])/gi,
+      '$1 ',
+    );
 
     return txt || undefined;
   };

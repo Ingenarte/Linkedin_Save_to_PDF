@@ -105,11 +105,23 @@
         .map((p) => normFn(p.textContent || ''))
         .filter(Boolean)
         .filter((t) => !/^show all\b/i.test(t));
-      if (ps.length < 2) continue;
+      if (ps.length < 1) continue;
       const school = ps[0];
-      const degree = ps[1];
+      let degree;
       let dates = '';
-      if (ps[2] && /\d{4}\s*[–-]|\bPresent\b/i.test(ps[2])) dates = ps[2];
+      if (ps.length === 1) {
+        degree = undefined;
+      } else if (ps.length === 2) {
+        if (/\d{4}\s*[–-]|\bPresent\b/i.test(ps[1])) {
+          dates = ps[1];
+          degree = undefined;
+        } else {
+          degree = ps[1];
+        }
+      } else {
+        degree = ps[1];
+        if (ps[2] && /\d{4}\s*[–-]|\bPresent\b/i.test(ps[2])) dates = ps[2];
+      }
       const m = dates.match(/(\d{4})\s*[–-]\s*(\d{4}|Present)/i);
       const item = {
         school,
@@ -117,7 +129,7 @@
         startDate: m ? m[1] : undefined,
         endDate: m ? m[2] : undefined,
       };
-      const key = `${school}|${degree}`.toLowerCase();
+      const key = `${school}|${degree || ''}`.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
       if (school && !isAd(item)) out.push(item);

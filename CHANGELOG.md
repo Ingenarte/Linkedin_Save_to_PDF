@@ -4,6 +4,14 @@ All notable changes to this extension will be documented here. The
 format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] — 2026-05-09
+
+### Removed
+
+- **Interests section** end-to-end: no popup toggle, no `extractInterests`
+  content script, no print block, and no `/details/interests/` deep pass.
+  LinkedIn SDUI "Interests" card is not part of the export surface anymore.
+
 ## [1.1.0] — 2026-05-01
 
 ### Added
@@ -17,8 +25,8 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   many cases.
 - **Stable `componentkey` selectors.** Sections are now located by SDUI
   identifier first (`Topcard`, `About`, `Experience`, `Education`,
-  `Skills`, `Languages`, `Certifications`, `Honors`, `Publications`,
-  `Interests`), with locale-aware heading regex and the legacy
+  `Skills`, `Languages`, `Certifications`, `Honors`, `Publications`),
+  with locale-aware heading regex and the legacy
   `id="*-section"` shape kept as fallbacks for older snapshots.
 - **Dark mode toggle** in the popup Settings tab. Persisted in
   `chrome.storage.sync` so the preference roams with the profile.

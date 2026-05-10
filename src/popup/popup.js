@@ -16,7 +16,6 @@ const DEFAULT_SETTINGS = {
   languages: true,
   honors: true,
   publications: true,
-  interests: true,
   // Dark mode (popup UI only). Print/PDF output stays light to keep
   // recruiter-friendly defaults.
   darkMode: false,
@@ -140,7 +139,6 @@ const LNP_CONTENT_SCRIPT_FILES = [
   'src/content/skills.js',
   'src/content/languages.js',
   'src/content/honors.js',
-  'src/content/interests.js',
   'src/content/content.js',
 ];
 
@@ -589,7 +587,7 @@ async function waitForDeepExportJob(jobId, options = {}) {
   throw new Error('Deep export job timed out');
 }
 
-const DEEP_EXPORT_COUNTDOWN_START_SEC = 40;
+const DEEP_EXPORT_COUNTDOWN_START_SEC = 60;
 
 let activeDeepExportJobId = null;
 let deepExportCancelRequested = false;
@@ -733,7 +731,10 @@ function teardownDeepExportUi() {
   deepExportCancelRequested = false;
   stopActiveDeepExportUi = null;
   const panel = document.getElementById('deepExportPanel');
-  if (panel) panel.hidden = true;
+  if (panel) {
+    panel.hidden = true;
+    panel.classList.remove('deep-export-panel--active');
+  }
   const stepEl = document.getElementById('deepExportStep');
   const cdEl = document.getElementById('deepExportCountdown');
   if (stepEl) stepEl.textContent = '';
@@ -798,7 +799,10 @@ async function startExport(deep) {
     if (useDeep) {
       const panel = document.getElementById('deepExportPanel');
       stepEl = document.getElementById('deepExportStep');
-      if (panel) panel.hidden = false;
+      if (panel) {
+        panel.hidden = false;
+        panel.classList.add('deep-export-panel--active');
+      }
       setDeepExportRunningUi(true);
       if (stepEl) {
         stepEl.textContent =

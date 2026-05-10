@@ -85,7 +85,6 @@
     if (settings.languages) R.renderLanguages(root, profile);
     if (settings.honors) R.renderHonors(root, profile);
     if (settings.publications) R.renderPublications(root, profile);
-    if (settings.interests) R.renderInterests(root, profile);
 
     const footer = el('footer', '');
     footer.append(

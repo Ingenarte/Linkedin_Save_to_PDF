@@ -402,7 +402,7 @@
       const ck = (s.getAttribute('componentkey') || '').toLowerCase();
       if (!ck.includes('education')) return false;
       if (
-        /interest|skill|certif|honor|publication|language|experience|topcard|about|contact|featured|activity|service|recommend|volunteer|license|position|company|insight|course/i.test(
+        /interests|skill|certif|honor|publication|language|experience|topcard|about|contact|featured|activity|service|recommend|volunteer|license|position|company|insight|course/i.test(
           ck,
         )
       ) {
@@ -942,7 +942,8 @@
   //                         "RecommendationsTopLevel"
   ns.SECTION_COMPONENTKEY = {
     topcard: ['Topcard'],
-    about: ['About'],
+    // LinkedIn 2026+ often uses *AboutTopLevel*; `endsWith('About')` misses those keys.
+    about: ['AboutTopLevelSection', 'AboutTopLevel', 'About'],
     experience: [
       'Experience',
       'ExperienceTopLevelSection',
@@ -972,7 +973,6 @@
       'PublicationTopLevelSection',
       'PublicationsTopLevelSection',
     ],
-    interests: ['Interests', 'InterestsTopLevel'],
     featured: ['Featured'],
     services: ['Services'],
     activity: ['Activity'],
@@ -984,7 +984,8 @@
   // translations are added because the user base of this extension is
   // mostly Latin American.
   ns.SECTION_HEADING = {
-    about: /^about|acerca de|sobre|resumen$/i,
+    about:
+      /^about|acerca de|sobre|resumen|summary|samenvatting|über mich|überblick$/i,
     experience: /^experience|experiencia|experi[eê]ncia$/i,
     education: /^education|educaci[oó]n|formaci[oó]n acad[eé]mica$/i,
     certifications:
@@ -993,7 +994,6 @@
     languages: /^languages|idiomas$/i,
     honors: /^honors *&* *awards|honors|awards|logros|distinciones|premios$/i,
     publications: /^publications|publicaciones|publica[cç][oõ]es$/i,
-    interests: /^interests|intereses|interesses$/i,
   };
 
   // Resolves the DOM root for a section. Tries (in order):
@@ -1265,7 +1265,7 @@
   // with obfuscated class names. Most multi-item sections have one
   // <a href="..."> per row (Experience -> /company/<id>/, Education ->
   // /school/<id>/ or /edu/<id>/, Certifications/Honors/Publications
-  // similarly). Other sections (Skills / Languages / Interests) use
+  // similarly). Other sections (Skills / Languages) use
   // bare <div>s.
   //
   // For both shapes we expose helpers that:
@@ -1405,7 +1405,7 @@
   };
 
   // Returns "row" divs inside a section that does NOT use anchors per
-  // row (Skills / Languages / Honors / Publications / Interests etc.).
+  // row (Skills / Languages / Honors / Publications, etc.).
   //
   // LinkedIn 2026 wraps rows differently per section. Sometimes the
   // rowsContainer's direct children are the rows; sometimes there is

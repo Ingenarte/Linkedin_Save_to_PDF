@@ -191,6 +191,13 @@
       if (txt === name) continue;
       if (isDegreeNoise(txt)) continue;
       if (/^contact\s+info$/i.test(txt)) continue;
+      // Video / media modals sometimes inject copy into the top card region.
+      if (
+        /modal window|press esc|press escape|video player|^\s*close\s*$/i.test(
+          txt,
+        )
+      )
+        continue;
       if (
         /^\d[\d.,+]*\s*(?:connections|followers|seguidores|conexi[oó]nes)?$/i.test(
           txt,

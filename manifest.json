@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "LinkedIn Save to PDF (Ingenarte)",
   "short_name": "LinkedIn PDF",
-  "version": "1.1.0",
+  "version": "1.2.1",
   "description": "Export a clean, print-ready view of your LinkedIn profile as PDF",
   "homepage_url": "https://github.com/Ingenarte/Linkedin_Save_to_PDF",
   "action": {
@@ -15,6 +15,22 @@
     "128": "public/icons/icon128.png"
   },
   "permissions": ["storage", "activeTab", "scripting", "tabs"],
+  "commands": {
+    "lnp-export-single-page": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+7",
+        "mac": "Command+Shift+7"
+      },
+      "description": "Export single-page PDF (LinkedIn profile tab; automation/dev)"
+    },
+    "lnp-export-full-profile": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+8",
+        "mac": "Command+Shift+8"
+      },
+      "description": "Start full-profile deep PDF export (LinkedIn profile tab; automation/dev)"
+    }
+  },
   "host_permissions": ["https://*.linkedin.com/*"],
   "background": {
     "service_worker": "src/background.js"
@@ -40,10 +56,10 @@
         "src/content/skills.js",
         "src/content/languages.js",
         "src/content/honors.js",
-        "src/content/interests.js",
         "src/content/content.js"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": true
     }
   ],
   "web_accessible_resources": [

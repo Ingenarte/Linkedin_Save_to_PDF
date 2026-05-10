@@ -23,8 +23,17 @@
       return undefined;
     }
 
+    // English UI + common localized LinkedIn labels (NL/DE/FR/ES/PT).
     const PROF_RE =
-      /^(native or bilingual proficiency|full professional proficiency|professional working proficiency|limited working proficiency|elementary proficiency)$/i;
+      /^(native or bilingual proficiency|full professional proficiency|professional working proficiency|limited working proficiency|elementary proficiency|moedertaal of tweetalig|volledige professionele vaardigheid|professionele werkvaardigheid|beperkte werkvaardigheid|elementaire kennis|muttersprache|zweisprachig|volle professionelle arbeitskompetenz|berufliche arbeitskompetenz|begrenzte arbeitskompetenz|grundkenntnisse|langue maternelle|bilingue|professionnel complet|professionnel limité|notions|nativo o bilingüe|competencia profesional completa|competencia profesional|competencia limitada|conocimientos básicos|fluente|intermediário|básico)$/i;
+    const looksLikeProficiencyLine = (text) => {
+      if (PROF_RE.test(text || '')) return true;
+      const t = norm(text || '').toLowerCase();
+      if (t.length < 6 || t.length > 130) return false;
+      return /\b(proficiency|professional|native|bilingual|elementary|limited|working|vaardigheid|kennis|niveau|moedertaal|beruflich|fließend|fluent|fluido|limitada|basico|básico|intermediate)\b/i.test(
+        t,
+      );
+    };
     const isSectionLabel = (text) =>
       /^(languages?|idiomas?)(?:\s*\(\d+\))?$/i.test(text || '');
     const isStructuralNoise = (text) =>
@@ -36,8 +45,8 @@
       if (
         !cleanLanguage ||
         !cleanProficiency ||
-        !PROF_RE.test(cleanProficiency) ||
-        PROF_RE.test(cleanLanguage) ||
+        !looksLikeProficiencyLine(cleanProficiency) ||
+        looksLikeProficiencyLine(cleanLanguage) ||
         isStructuralNoise(cleanLanguage) ||
         isAdNoise(cleanLanguage) ||
         isAdNoise(cleanProficiency)
@@ -61,10 +70,11 @@
     // Pair each proficiency with the nearest previous non-structural label.
     const addFromOrderedTexts = (texts) => {
       for (let i = 0; i < texts.length; i++) {
-        if (!PROF_RE.test(texts[i])) continue;
+        if (!looksLikeProficiencyLine(texts[i])) continue;
         for (let j = i - 1; j >= 0; j--) {
           const candidate = texts[j];
-          if (PROF_RE.test(candidate) || isStructuralNoise(candidate)) continue;
+          if (looksLikeProficiencyLine(candidate) || isStructuralNoise(candidate))
+          continue;
           addLanguage(out, candidate, texts[i], seen);
           break;
         }
@@ -82,9 +92,12 @@
           .map((node) => norm(node.textContent || node.innerText || ''))
           .filter(Boolean)
           .filter((text) => !isAdNoise(text));
-        const proficiencyCount = texts.filter((text) => PROF_RE.test(text)).length;
+        const proficiencyCount = texts.filter((text) =>
+          looksLikeProficiencyLine(text),
+        ).length;
         const languageCandidateCount = texts.filter(
-          (text) => !PROF_RE.test(text) && !isStructuralNoise(text),
+          (text) =>
+            !looksLikeProficiencyLine(text) && !isStructuralNoise(text),
         ).length;
         const score = proficiencyCount * 2 + languageCandidateCount;
         if (score > bestScore) {
@@ -113,7 +126,9 @@
       for (const r of rows) {
         const spans = ns.collectTextSpans(r).map((text) => norm(text)).filter(Boolean);
         if (!spans.length || spans.some(isAdNoise)) continue;
-        const proficiencyIndex = spans.findIndex((text) => PROF_RE.test(text));
+        const proficiencyIndex = spans.findIndex((text) =>
+          looksLikeProficiencyLine(text),
+        );
         if (proficiencyIndex <= 0) continue;
         addLanguage(out, spans[proficiencyIndex - 1], spans[proficiencyIndex], seen);
       }
