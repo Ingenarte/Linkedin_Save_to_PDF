@@ -100,9 +100,12 @@ const DEEP_SECTION_LABELS = {
 
 const DEEP_SECTION_TIMING = {
   experience: { budgetMs: 5200, settleMs: 900, postPingMs: 250, retrySettleMs: 650, weight: 'full list' },
-  education: { budgetMs: 5000, settleMs: 800, postPingMs: 200, retrySettleMs: 650, weight: 'full list' },
+  // education: higher settle + budget so headless/GPU-less Chromium (e.g. Linode)
+  // has time to hydrate all SDUI rows before scroll extraction starts.
+  education: { budgetMs: 9000, settleMs: 1800, postPingMs: 400, retrySettleMs: 1500, weight: 'full list' },
   skills: { budgetMs: 3600, settleMs: 250, postPingMs: 0, retrySettleMs: 0, weight: 'many rows' },
-  certifications: { budgetMs: 3000, settleMs: 200, postPingMs: 0, retrySettleMs: 0, weight: 'fast' },
+  // certifications: extra settle so all entries are in the DOM before extraction.
+  certifications: { budgetMs: 5000, settleMs: 900, postPingMs: 200, retrySettleMs: 800, weight: 'fast' },
   languages: { budgetMs: 2200, settleMs: 150, postPingMs: 0, retrySettleMs: 0, weight: 'fast' },
   honors: { budgetMs: 2400, settleMs: 150, postPingMs: 0, retrySettleMs: 0, weight: 'fast' },
   publications: { budgetMs: 2400, settleMs: 150, postPingMs: 0, retrySettleMs: 0, weight: 'fast' },

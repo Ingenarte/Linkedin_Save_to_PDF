@@ -532,15 +532,18 @@
   // tabs so each page finishes within ~6s instead of tens of seconds.
   ns.expandUIWithBudget = async (maxTotalMs = 5500, section) => {
     const heavySection = section === 'experience' || section === 'education';
+    // education gets the slowest scroll to give headless/GPU-less Chromium
+    // (e.g. Linode Xvfb) enough time to hydrate each SDUI row.
+    const educationSection = section === 'education';
     const mediumSection = section === 'skills';
-    const reserveTop = heavySection ? 380 : 220;
+    const reserveTop = heavySection ? 500 : 220;
     const deadline = Date.now() + Math.max(1200, maxTotalMs - reserveTop);
     const scrollMeta = await ns.scrollUntilStable({
-      stepWait: heavySection ? 160 : 110,
-      quietMs: heavySection ? 200 : 140,
-      settleWait: heavySection ? 340 : 220,
+      stepWait: educationSection ? 300 : heavySection ? 160 : 110,
+      quietMs: educationSection ? 350 : heavySection ? 200 : 140,
+      settleWait: educationSection ? 600 : heavySection ? 340 : 220,
       stableSteps: heavySection ? 2 : 1,
-      maxSteps: heavySection ? 24 : mediumSection ? 18 : 10,
+      maxSteps: educationSection ? 32 : heavySection ? 24 : mediumSection ? 18 : 10,
       deadlineMs: deadline,
     });
     await ns.clickMoreButtons();
