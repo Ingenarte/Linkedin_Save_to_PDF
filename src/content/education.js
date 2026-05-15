@@ -212,10 +212,14 @@
         ? fromEntitiesMerged
         : fromEntitiesSingle;
 
-    const eduSections =
+    // On /details/education/ LinkedIn may not add componentkey to sections,
+    // so listEducationSectionRootsInMain() returns []. Fall back to sec (main)
+    // so extractEducationFromSchoolAnchors still iterates a[href*="/school/"].
+    const _eduRoots =
       typeof ns.listEducationSectionRootsInMain === 'function'
         ? ns.listEducationSectionRootsInMain()
-        : [sec];
+        : [];
+    const eduSections = _eduRoots.length > 0 ? _eduRoots : [sec];
     const fromSchoolAnchors = extractEducationFromSchoolAnchors(
       eduSections,
       norm,
