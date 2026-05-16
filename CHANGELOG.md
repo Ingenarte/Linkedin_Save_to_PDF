@@ -13,6 +13,17 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   (the `+`). Allow an optional `+` so "5 endorsements" / "99+ endorsements" /
   "1 endorsement" are all dropped (seen on reidhoffman deep).
 
+### Known limitations
+
+- **Deep Top Skills can intermittently fall back to the 2-item main-profile
+  preview** instead of the full `/details/skills/` list. Strongly mitigated
+  (full-list deep timing 9000/1800, active-tab re-extract, and a base-vs-deep
+  "keep the longer list" merge), so the large majority of runs return the
+  complete list, but it is not 100% deterministic and is environment-agnostic
+  (observed on both Linode and local, e.g. reidhoffman local deep). Accepted
+  as a known residual; education, certifications, languages and the other
+  sections are reliable.
+
 ## [1.2.4] — 2026-05-16
 
 ### Fixed
