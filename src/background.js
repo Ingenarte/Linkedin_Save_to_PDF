@@ -998,23 +998,15 @@ async function runDeepExport({ originalTabId, slug, settings, job, runToken }) {
       }
       continue;
     }
-    // certifications & skills: the /details/<section>/ extract is AUTHORITATIVE.
-    // The main-profile preview used as `base` is unreliable for these — it even
-    // captures the section title ("Licenses & certifications") as an entry and
-    // drops issuer-less certs (Luca FCE, Franco JSConf). shouldApplyDeepMerge's
-    // length comparison is therefore meaningless here (junk-inflated base).
-    // When the deep list is a non-empty array, it always wins.
+    // certifications & skills: keep whichever of base vs deep is LONGER.
+    // The section-title junk row ("Licenses & certifications") is already
+    // filtered out of every path, so the base count is valid. The /details/
+    // deep extract is normally richer (Luca GMAT+FCE, Franco Odoo+JSConf,
+    // Martin 3) and wins; but a flaky/throttled deep that truncates (e.g.
+    // Linode background tab dropping paul-dc's Cambridge cert) must NOT
+    // clobber a valid base — so a shorter deep is ignored.
     const deepNonEmpty = Array.isArray(deepValue) && deepValue.length > 0;
-    if (section === 'certifications') {
-      // base (main-profile preview) is junk for certs (title row, missing
-      // issuer-less certs) → the /details/ deep extract always wins.
-      if (deepNonEmpty) {
-        merged[key] = deepValue;
-        improvedSections.push(section);
-      }
-    } else if (section === 'skills') {
-      // skills deep can flakily truncate to the preview; never let a short
-      // deep clobber a richer base — keep whichever list is LONGER.
+    if (section === 'certifications' || section === 'skills') {
       const baseArr = Array.isArray(merged[key]) ? merged[key] : [];
       if (deepNonEmpty && deepValue.length >= baseArr.length) {
         merged[key] = deepValue;

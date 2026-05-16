@@ -4,6 +4,20 @@ All notable changes to this extension will be documented here. The
 format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.4] — 2026-05-16
+
+### Fixed
+
+- **Deep Certifications could drop a cert when the /details/ extract flakily
+  truncated.** 1.2.3 made the deep cert list always win over the base; on a
+  throttled background tab (e.g. Linode) the deep extract sometimes returned
+  fewer certs and clobbered a valid base (paul-dc lost "First Certificate in
+  English — Cambridge": Linode deep 1 vs Local deep 2). Certifications now use
+  the same rule as skills — keep whichever of base vs deep is LONGER. The
+  section-title junk row is already filtered from every path, so the base
+  count is valid; a richer deep (Luca GMAT+FCE, Franco Odoo+JSConf, Martin 3)
+  still wins, but a shorter flaky deep can no longer remove real certs.
+
 ## [1.2.3] — 2026-05-16
 
 ### Fixed
@@ -17,7 +31,7 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 - **Deep Certifications incomplete on 2026 `/details/certifications/`.** The
   company-logo walker missed certs whose issuer has no LinkedIn `/company/`
   page (GMAC, Cambridge, JSConf EU). Added a per-entry walker that seeds one
-  cert per "Issued <Mon Year>" line (anchor-independent, reliable), filtered
+  cert per "Issued {Mon Year}" line (anchor-independent, reliable), filtered
   the section title ("Licenses & certifications") that was mis-captured as a
   cert row and tied the good list on length, and made the dedicated details
   page prefer the per-entry list (then company-logo, then generic). The deep
