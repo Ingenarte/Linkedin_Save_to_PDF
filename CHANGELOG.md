@@ -4,6 +4,36 @@ All notable changes to this extension will be documented here. The
 format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.3] — 2026-05-16
+
+### Fixed
+
+- **Languages: LinkedIn ad report/feedback text leak.** When a profile had
+  0–1 languages, an ad block inside the `/details/languages/` area leaked
+  *"I've seen the same ad too often / …Professional Community Policies…"*
+  into the Languages section. Added those report/feedback phrases to the
+  central ad filter, and hardened `looksLikeProficiencyLine` (a long sentence
+  merely containing "professional" is no longer treated as a proficiency).
+- **Deep Certifications incomplete on 2026 `/details/certifications/`.** The
+  company-logo walker missed certs whose issuer has no LinkedIn `/company/`
+  page (GMAC, Cambridge, JSConf EU). Added a per-entry walker that seeds one
+  cert per "Issued <Mon Year>" line (anchor-independent, reliable), filtered
+  the section title ("Licenses & certifications") that was mis-captured as a
+  cert row and tied the good list on length, and made the dedicated details
+  page prefer the per-entry list (then company-logo, then generic). The deep
+  `/details/` extract is now authoritative for certs (the main-profile
+  preview base is unreliable). Result: Luca GMAT+FCE, Franco Odoo+JSConf,
+  Martin CISM+NSE3+ISO all captured.
+- **Deep Top Skills truncated to the 2-row preview / flaky.** `skills` deep
+  timing was far too short (3600/250) so a background tab kept only the
+  main-profile preview; bumped to the full-list budget (9000/1800) and added
+  `skills`/`certifications` to the active-tab re-extract set (Chromium
+  throttles background-tab layout, so virtualized rows never hydrated). Skills
+  merge now keeps the longer of base vs deep so a flaky short extract can no
+  longer clobber the full list. Added an `<hr>`-delimited list-container
+  walker for `/details/skills/` and excluded the category tabs
+  ("Tools & Technologies", "Other Skills", …) and next-section bleed.
+
 ## [1.2.2] — 2026-05-16
 
 ### Fixed

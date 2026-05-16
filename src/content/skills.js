@@ -24,7 +24,7 @@
     )
       return true;
     if (
-      /^(industry knowledge|interpersonal skills|aptitudes|habilidades)$/i.test(
+      /^(industry knowledge|interpersonal skills|tools & technologies|tools and technologies|other skills|aptitudes|habilidades|herramientas y tecnolog[ií]as|conocimiento del sector)$/i.test(
         t,
       )
     )
@@ -122,6 +122,82 @@
           skillLabelFromAnchor(row) ||
           T(row);
         add(label);
+      }
+
+      // 2026 /details/skills/ without componentkey: entries are <hr>-delimited
+      // sibling blocks. The first non-noise line of each block is the skill
+      // (a second line, e.g. an associated role/project, is skipped). Walk the
+      // list container directly so the full list is captured, not just the
+      // 2-row main-profile preview.
+      const mainEl =
+        document.querySelector('main') || document.querySelector('[role="main"]');
+      let listRoot = null;
+      if (skillRows.length) {
+        listRoot = skillRows[0].parentElement;
+        for (const r of skillRows)
+          while (listRoot && !listRoot.contains(r))
+            listRoot = listRoot.parentElement;
+      }
+      if (!listRoot) {
+        const titleP = [...(mainEl || work).querySelectorAll('p, h2')].find(
+          (p) => /^\s*skills?\s*$|aptitudes|habilidades|compet[eê]ncias/i.test(
+            norm(p.textContent || ''),
+          ),
+        );
+        listRoot =
+          (titleP &&
+            (titleP.closest('.scaffold-finite-scroll__content') ||
+              titleP.closest('[class*="finite-scroll__content"]') ||
+              titleP.closest('[class*="scaffold"]'))) ||
+          mainEl ||
+          work;
+      }
+      if (listRoot) {
+        // <hr> separators usually sit a few levels below listRoot; split at
+        // their common parent. Stop at the next profile section so the walker
+        // never bleeds into Honors/Publications/Languages/etc.
+        const hrs = [...listRoot.querySelectorAll('hr')];
+        const splitRoot =
+          (hrs.length && hrs[0].parentElement && listRoot.contains(hrs[0])
+            ? hrs[0].parentElement
+            : listRoot) || listRoot;
+        const SECTION_BREAK_RE =
+          /^(honors?\s*&?\s*awards?|honores|publications?|publicaciones|recommendations?|recomendaciones|interests?|intereses|languages?|idiomas|education|educaci[oó]n|experience|certifications?|licen[sc]es|people also|más perfiles|more profiles|nothing to see)\b/i;
+        const groups = [];
+        let cur = [];
+        let stop = false;
+        for (const child of [...splitRoot.children]) {
+          if (stop || child.nodeType !== 1) continue;
+          if (child.tagName === 'HR') {
+            if (cur.length) groups.push(cur);
+            cur = [];
+            continue;
+          }
+          const head = norm(
+            (child.innerText || child.textContent || '').split('\n')[0] || '',
+          );
+          if (SECTION_BREAK_RE.test(head)) {
+            stop = true;
+            continue;
+          }
+          cur.push(child);
+        }
+        if (cur.length) groups.push(cur);
+        for (const g of groups) {
+          let lines = [];
+          for (const el of g) {
+            if (el.closest('nav, footer, aside')) continue;
+            lines = lines.concat(
+              typeof ns.collectTextSpans === 'function'
+                ? ns.collectTextSpans(el)
+                : norm(el.innerText || '').split(/\n+/),
+            );
+          }
+          const label = lines
+            .map((s) => norm(s))
+            .find((s) => s && !isNoiseSkillLabel(s));
+          if (label) add(label);
+        }
       }
     }
 

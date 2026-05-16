@@ -103,9 +103,14 @@ const DEEP_SECTION_TIMING = {
   // education: higher settle + budget so headless/GPU-less Chromium (e.g. Linode)
   // has time to hydrate all SDUI rows before scroll extraction starts.
   education: { budgetMs: 9000, settleMs: 1800, postPingMs: 400, retrySettleMs: 1500, weight: 'full list' },
-  skills: { budgetMs: 3600, settleMs: 250, postPingMs: 0, retrySettleMs: 0, weight: 'many rows' },
-  // certifications: extra settle so all entries are in the DOM before extraction.
-  certifications: { budgetMs: 5000, settleMs: 900, postPingMs: 200, retrySettleMs: 800, weight: 'fast' },
+  // skills: virtualized full list — needs the education-class budget so the
+  // background/active tab hydrates ALL rows before extraction. 5200/900 was
+  // still too short (flaky 2-vs-10 between runs).
+  skills: { budgetMs: 9000, settleMs: 1800, postPingMs: 400, retrySettleMs: 1500, weight: 'full list' },
+  // certifications: 2026 /details/certifications/ lazy-renders the 2nd+ certs,
+  // so a background tab with only 900ms settle saw just the 1st cert (Luca,
+  // Franco). Match the education-class budget so all rows hydrate first.
+  certifications: { budgetMs: 9000, settleMs: 1800, postPingMs: 400, retrySettleMs: 1500, weight: 'full list' },
   languages: { budgetMs: 2200, settleMs: 150, postPingMs: 0, retrySettleMs: 0, weight: 'fast' },
   honors: { budgetMs: 2400, settleMs: 150, postPingMs: 0, retrySettleMs: 0, weight: 'fast' },
   publications: { budgetMs: 2400, settleMs: 150, postPingMs: 0, retrySettleMs: 0, weight: 'fast' },
@@ -706,10 +711,18 @@ async function fetchDeepSection(
   const url = buildDetailsUrl(slug, sectionSlug);
   const expectedPrefix = url;
   const label = DEEP_SECTION_LABELS[section] || section;
-  const activeRetrySection =
+  // Full-list / many-row sections whose /details/ page legitimately holds
+  // MORE than the main-profile preview, and which a BACKGROUND tab lazy-renders
+  // incompletely. These must get an active-tab re-extract (Chromium throttles
+  // layout/visibility in background tabs, so the 2nd+ rows never render until
+  // the tab is visible). certifications & skills were missing here — that is
+  // why Luca/Franco deep kept only the 1st cert and skills was flaky.
+  const listSection =
     section === 'experience' ||
     section === 'education' ||
-    section === 'languages';
+    section === 'skills' ||
+    section === 'certifications';
+  const activeRetrySection = listSection || section === 'languages';
   const timing = deepSectionTiming(section);
 
   let tabId;
@@ -767,10 +780,14 @@ async function fetchDeepSection(
     let vlen = Array.isArray(value) ? value.length : 0;
     const hint =
       typeof baseListLenHint === 'number' ? baseListLenHint : 0;
+    // List sections ALWAYS get one active-tab re-extract (background-tab render
+    // is unreliable, and a truncated bg result often equals the small preview
+    // hint so a "<" check would skip the retry). The retry keeps the LARGER of
+    // the two results, so an unnecessary retry is harmless. Non-list sections
+    // (languages) keep the conservative hint-based condition.
     const needsRetry =
       activeRetrySection &&
-      hint > 0 &&
-      (vlen === 0 || vlen < hint);
+      (listSection || (hint > 0 && (vlen === 0 || vlen < hint)));
 
     if (needsRetry) {
       try {
@@ -981,8 +998,29 @@ async function runDeepExport({ originalTabId, slug, settings, job, runToken }) {
       }
       continue;
     }
-    const applied = shouldApplyDeepMerge(deepValue, merged[key]);
-    if (applied) {
+    // certifications & skills: the /details/<section>/ extract is AUTHORITATIVE.
+    // The main-profile preview used as `base` is unreliable for these — it even
+    // captures the section title ("Licenses & certifications") as an entry and
+    // drops issuer-less certs (Luca FCE, Franco JSConf). shouldApplyDeepMerge's
+    // length comparison is therefore meaningless here (junk-inflated base).
+    // When the deep list is a non-empty array, it always wins.
+    const deepNonEmpty = Array.isArray(deepValue) && deepValue.length > 0;
+    if (section === 'certifications') {
+      // base (main-profile preview) is junk for certs (title row, missing
+      // issuer-less certs) → the /details/ deep extract always wins.
+      if (deepNonEmpty) {
+        merged[key] = deepValue;
+        improvedSections.push(section);
+      }
+    } else if (section === 'skills') {
+      // skills deep can flakily truncate to the preview; never let a short
+      // deep clobber a richer base — keep whichever list is LONGER.
+      const baseArr = Array.isArray(merged[key]) ? merged[key] : [];
+      if (deepNonEmpty && deepValue.length >= baseArr.length) {
+        merged[key] = deepValue;
+        improvedSections.push(section);
+      }
+    } else if (shouldApplyDeepMerge(deepValue, merged[key])) {
       merged[key] = deepValue;
       improvedSections.push(section);
     }

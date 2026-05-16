@@ -30,6 +30,13 @@
       if (PROF_RE.test(text || '')) return true;
       const t = norm(text || '').toLowerCase();
       if (t.length < 6 || t.length > 130) return false;
+      // Real proficiency labels are short (≤ ~5 words, e.g. "Native or
+      // bilingual proficiency"). A longer sentence that merely contains
+      // "professional" — e.g. the leaked "...goes against our Professional
+      // Community Policies, please let us know." — is NOT a proficiency line.
+      if (t.split(/\s+/).filter(Boolean).length > 6) return false;
+      if (/(policies|let us know|goes against|seen the same ad)/i.test(t))
+        return false;
       return /\b(proficiency|professional|native|bilingual|elementary|limited|working|vaardigheid|kennis|niveau|moedertaal|beruflich|fließend|fluent|fluido|limitada|basico|básico|intermediate)\b/i.test(
         t,
       );

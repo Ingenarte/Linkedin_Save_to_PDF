@@ -34,6 +34,15 @@
     function isLikelyLinkedInAdCertification(item) {
       const blob = `${item.name || ''} ${item.issuer || ''} ${item.credentialId || ''}`.toLowerCase();
       if (!blob.trim()) return false;
+      // The section title itself ("Licenses & certifications" / "Certifications")
+      // is sometimes mis-captured as a cert row (esp. by collectGenericRows on
+      // /details/certifications/). Never let it through as an entry.
+      if (
+        /^\s*(licen[sc]es?\s*&?\s*certifications?|certifications?|certificados?|licencias y certificaciones|licen[sc]es?)\s*$/i.test(
+          (item.name || '').trim(),
+        )
+      )
+        return true;
       if (
         typeof ns.isLinkedInAdOrPreferenceText === 'function' &&
         ns.isLinkedInAdOrPreferenceText(blob)
@@ -81,18 +90,30 @@
         if (parsed.credentialId) item.credentialId = parsed.credentialId;
         if (!isLikelyLinkedInAdCertification(item)) items.push(item);
       }
-      if (items.length) {
-        const onCertDetails =
-          ns.isDetailsPage?.() && ns.currentDetailsKind?.() === 'certifications';
-        if (onCertDetails) {
-          const alt = tryCompanyLogoCertRows();
-          if (alt.length > items.length) {
-            items.length = 0;
-            for (const it of alt) items.push(it);
-          }
+      const onCertDetails =
+        ns.isDetailsPage?.() && ns.currentDetailsKind?.() === 'certifications';
+      if (onCertDetails) {
+        // On the dedicated /details/certifications/ page ALWAYS pick the
+        // richest strategy. Never early-return a thin generic-rows result:
+        // that dropped Luca's FCE and Franco's JSConf (generic rows yielded
+        // only the 1st cert). tryDetailsListCertRows() seeds one entry per
+        // "Issued <date>" and is the reliable per-entry path.
+        // prio: detailsList (per-"Issued" seed, most reliable) > companyLogo >
+        // generic. On a length tie the higher-prio strategy wins (generic ties
+        // detailsList on count but is junk-prone — title rows, missing certs).
+        const cands = [
+          { list: tryDetailsListCertRows(), prio: 3 },
+          { list: tryCompanyLogoCertRows(), prio: 2 },
+          { list: items.slice(), prio: 1 },
+        ].filter((c) => c.list && c.list.length);
+        if (cands.length) {
+          cands.sort(
+            (a, b) => b.list.length - a.list.length || b.prio - a.prio,
+          );
+          return cands[0].list;
         }
-        if (items.length) return items;
       }
+      if (items.length) return items;
     }
 
     // LinkedIn 2026+ /details/certifications/: title is often a <p> (not h2),
@@ -205,8 +226,106 @@
       return out;
     }
 
+    // 2026 /details/certifications/: entries are <hr>-delimited sibling blocks
+    // inside one list container. The company-logo walker misses certs whose
+    // issuer has no LinkedIn /company/ page (GMAC, Cambridge, JSConf EU), and
+    // is hydration-flaky. Walk the container's hr-delimited groups directly so
+    // every cert is captured regardless of anchors.
+    // 2026 /details/certifications/: certs are NOT reliably separated by <hr>
+    // (Luca/Franco have a single title/list <hr>; the per-cert blocks are just
+    // sibling divs). Seed one entry per "Issued <Mon Year>"/"Credential ID"
+    // leaf — every real cert has one — then climb to the tightest container
+    // that still holds exactly ONE issued token (climbing further would merge
+    // two certs). This is anchor-independent and per-entry reliable.
+    function tryDetailsListCertRows() {
+      const mainEl =
+        document.querySelector('main') || document.querySelector('[role="main"]');
+      const root = mainEl || sec;
+      if (!root) return [];
+      const FOOTER_RE =
+        /linkedin corporation|talent solutions|community guidelines|ad choices|help center|recommendation transparency|select language/i;
+      // ENTRY boundary = the "Issued <Mon Year>" date line. Exactly ONE per
+      // cert (a cert may ALSO carry "Credential ID …"/"Expires …", which are
+      // NOT entry boundaries — counting them split single certs incorrectly).
+      const ENTRY_RE =
+        /\b(issued|expedid[oa]|emitid[oa])\b\s+[A-Za-zÀ-ÿ.]{2,}\.?\s*\d{4}/i;
+      const NAME_SKIP_RE =
+        /\b(issued|expedid[oa]|emitid[oa]|expires?|caduca|vence|credential\s*id)\b/i;
+      const entryCount = (spans) =>
+        spans.filter((s) => ENTRY_RE.test(s)).length;
+      const leaves = [
+        ...root.querySelectorAll('span[aria-hidden="true"], p, time'),
+      ].filter((e) => {
+        const t = norm(e.textContent || '');
+        return (
+          t.length > 0 &&
+          t.length < 90 &&
+          ENTRY_RE.test(t) &&
+          !e.closest('nav, footer, aside')
+        );
+      });
+      const out = [];
+      const seen = new Set();
+      const seenRows = new Set();
+      for (const leaf of leaves) {
+        let row = leaf;
+        let best = null;
+        for (let d = 0; d < 16 && row && row !== root; d++) {
+          const sp = ns
+            .collectTextSpans(row)
+            .map((s) => norm(s))
+            .filter(Boolean);
+          if (entryCount(sp) >= 2) break; // climbing more merges 2 certs
+          if (
+            sp.length >= 2 &&
+            sp.some((s) => ENTRY_RE.test(s)) &&
+            !sp.some((s) => FOOTER_RE.test(s))
+          )
+            best = row;
+          row = row.parentElement;
+        }
+        if (!best || seenRows.has(best)) continue;
+        seenRows.add(best);
+        if (isLikelyAdRowElement(best)) continue;
+        const spans = ns
+          .collectTextSpans(best)
+          .map((s) => norm(s))
+          .filter(Boolean)
+          .filter(
+            (s) =>
+              !/^show credential$/i.test(s) &&
+              !/^view badge$/i.test(s) &&
+              !FOOTER_RE.test(s),
+          );
+        if (!spans.length) continue;
+        const parsed = ns.parseRowSpans(spans);
+        let name = parsed.title && dedupeText(parsed.title);
+        if (!name || NAME_SKIP_RE.test(name)) {
+          const alt = spans.find(
+            (s) => s.length > 1 && !NAME_SKIP_RE.test(s) && !/^\d+$/.test(s),
+          );
+          name = alt ? dedupeText(alt) : '';
+        }
+        if (!name) continue;
+        const item = {
+          name,
+          issuer: parsed.secondary || undefined,
+          issued: parsed.issued,
+        };
+        if (parsed.credentialId) item.credentialId = parsed.credentialId;
+        if (isLikelyLinkedInAdCertification(item)) continue;
+        const k = `${name}|${item.credentialId || ''}`.toLowerCase();
+        if (seen.has(k)) continue;
+        seen.add(k);
+        out.push(item);
+      }
+      return out;
+    }
+
     if (!items.length) {
-      for (const it of tryCompanyLogoCertRows()) items.push(it);
+      for (const it of tryDetailsListCertRows()) items.push(it);
+      if (!items.length)
+        for (const it of tryCompanyLogoCertRows()) items.push(it);
       if (items.length) return items;
     }
 

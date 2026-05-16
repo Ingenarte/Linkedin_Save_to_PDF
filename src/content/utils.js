@@ -40,6 +40,17 @@
       compact.includes('i dont want to see this ad')
     )
       return true;
+    // LinkedIn ad *report/feedback* strings (from the ad "···" menu). These
+    // leak into Languages when a profile has 0-1 languages and an ad block is
+    // rendered inside the /details/languages area (seen on Luca & Martin).
+    if (
+      compact.includes('seen the same ad too often') ||
+      compact.includes('goes against our professional community policies') ||
+      compact.includes('professional community policies') ||
+      compact.includes('we limit how often you see the same ad') ||
+      compact.includes('if you think this goes against')
+    )
+      return true;
     if (/^[-–—·•]*\s*manage your ad preferences$/i.test(t)) return true;
     return false;
   };
@@ -531,19 +542,24 @@
   // Tighter scroll + shorter observer waits for /details/ deep-export
   // tabs so each page finishes within ~6s instead of tens of seconds.
   ns.expandUIWithBudget = async (maxTotalMs = 5500, section) => {
-    const heavySection = section === 'experience' || section === 'education';
-    // education gets the slowest scroll to give headless/GPU-less Chromium
-    // (e.g. Linode Xvfb) enough time to hydrate each SDUI row.
-    const educationSection = section === 'education';
+    const heavySection =
+      section === 'experience' ||
+      section === 'education' ||
+      section === 'certifications';
+    // education & certifications get the slowest scroll: their 2026 /details/
+    // SDUI lists lazy-render the 2nd+ rows, so a background tab needs extra
+    // hydration time before extraction (headless/GPU-less Chromium, e.g. Linode).
+    const slowSection =
+      section === 'education' || section === 'certifications';
     const mediumSection = section === 'skills';
     const reserveTop = heavySection ? 500 : 220;
     const deadline = Date.now() + Math.max(1200, maxTotalMs - reserveTop);
     const scrollMeta = await ns.scrollUntilStable({
-      stepWait: educationSection ? 300 : heavySection ? 160 : 110,
-      quietMs: educationSection ? 350 : heavySection ? 200 : 140,
-      settleWait: educationSection ? 600 : heavySection ? 340 : 220,
+      stepWait: slowSection ? 300 : heavySection ? 160 : 110,
+      quietMs: slowSection ? 350 : heavySection ? 200 : 140,
+      settleWait: slowSection ? 600 : heavySection ? 340 : 220,
       stableSteps: heavySection ? 2 : 1,
-      maxSteps: educationSection ? 32 : heavySection ? 24 : mediumSection ? 18 : 10,
+      maxSteps: slowSection ? 32 : heavySection ? 24 : mediumSection ? 18 : 10,
       deadlineMs: deadline,
     });
     await ns.clickMoreButtons();
