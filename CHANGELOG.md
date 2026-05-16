@@ -4,6 +4,23 @@ All notable changes to this extension will be documented here. The
 format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.2] — 2026-05-16
+
+### Fixed
+
+- **Deep Education capture on the 2026 `/details/education/` SDUI layout.**
+  The new layout has no `entity-collection-item` wrappers and puts each line
+  in `span[aria-hidden="true"]` instead of `<p>`, and entries are sibling
+  block `<div>`s separated by `<hr>`. The school-anchor walker also de-duped
+  by school URL, dropping every extra degree at the same school. Result: deep
+  export only kept a collapsed list (one row per school, no degree, no dates).
+  Now: a new list-container walker reads every entry block (including schools
+  with no LinkedIn page, e.g. a high school), and the anchor walker no longer
+  de-dupes by school — so multiple degrees per school (BSc+MSc, 1st+2nd level
+  diploma) and the high-school entry, with date ranges, are all captured.
+- Education/Certifications deep timing widened for slower headless Chromium
+  (e.g. Linode Xvfb) so virtualized rows hydrate before extraction.
+
 ## [1.2.0] — 2026-05-09
 
 ### Removed

@@ -26,71 +26,144 @@
    */
   function extractEducationFromSchoolAnchors(sections, normFn, isAd) {
     if (!sections || !sections.length) return [];
-    const seenPath = new Set();
     const out = [];
-    const schoolPath = (href) => {
-      try {
-        const u = new URL(href, 'https://www.linkedin.com');
-        return u.pathname.replace(/\/+$/, '').toLowerCase();
-      } catch {
-        return (href || '').toLowerCase();
-      }
+    // De-dupe by the FULL entry (school + degree + dates), never by school
+    // alone: one school can hold several degrees (e.g. BSc + MSc, 1st + 2nd
+    // level diploma). The old seenPath dedup dropped every extra degree.
+    const seenKey = new Set();
+    // 2026 LinkedIn SDUI puts each line in span[aria-hidden="true"]; older /
+    // jsdom layouts use <p>. Read both. visually-hidden mirror spans are not
+    // [aria-hidden="true"], so this avoids the duplicated a11y text.
+    const lineText = (el) =>
+      [...el.querySelectorAll('span[aria-hidden="true"], p')]
+        .map((n) => normFn(n.textContent || ''))
+        .filter(Boolean)
+        .filter((t) => !/^show all\b/i.test(t));
+    const dedupeConsecutive = (arr) => {
+      const r = [];
+      for (const t of arr) if (r[r.length - 1] !== t) r.push(t);
+      return r;
     };
+    const DATE_RE =
+      /(\d{4})\s*.*?[–\-]\s*.*?(\d{4}|present|presente|actualidad|en cours)/i;
     for (const sec of sections) {
       if (!sec) continue;
-      const anchors = sec.querySelectorAll('a[href*="/school/"]');
+      const anchors = [...sec.querySelectorAll('a[href*="/school/"]')];
       for (const a of anchors) {
-        const rawHref = a.getAttribute('href') || '';
-        const pathKey = schoolPath(rawHref);
-        if (!pathKey || seenPath.has(pathKey)) continue;
-        seenPath.add(pathKey);
-        let row =
-          a.closest('[componentkey*="entity-collection-item"]') || null;
-        if (!row || !sec.contains(row)) {
-          let el = a.parentElement;
-          for (let d = 0; d < 14 && el && el !== sec; d++) {
-            const nP = el.querySelectorAll('p').length;
-            if (nP >= 2) {
-              row = el;
-              break;
-            }
-            el = el.parentElement;
-          }
+        // Tightest ancestor that still wraps exactly THIS single school
+        // anchor — climbing one level further would pull in the next
+        // education entry's anchor, merging two degrees into one row.
+        let container = a.parentElement;
+        let el = a.parentElement;
+        for (let d = 0; d < 16 && el && el !== sec; d++) {
+          const here = el.querySelectorAll('a[href*="/school/"]').length;
+          if (here > 1) break;
+          if (here === 1 && lineText(el).length >= 2) container = el;
+          el = el.parentElement;
         }
-        if (!row) row = a.closest('li') || a.parentElement;
-        if (!row) continue;
-        const ps = [...row.querySelectorAll('p')]
-          .map((p) => normFn(p.textContent || ''))
-          .filter(Boolean)
-          .filter((t) => !/^show all\b/i.test(t));
-        let school = normFn(a.textContent || '');
-        let degree;
+        if (!container) continue;
+        const lines = dedupeConsecutive(lineText(container)).filter(
+          (t) => !/^grade\s*:/i.test(t),
+        );
+        const school = lines[0] || normFn(a.textContent || '');
+        let degree = lines[1];
         let startDate;
         let endDate;
-        if (ps.length >= 2) {
-          school = ps[0];
-          degree = ps[1];
-          let dates = '';
-          if (ps[2] && /\d{4}\s*[–-]|\bPresent\b/i.test(ps[2]))
-            dates = ps[2];
-          const m = dates.match(/(\d{4})\s*[–-]\s*(\d{4}|Present)/i);
+        for (let i = 1; i < lines.length; i++) {
+          const m = lines[i].match(DATE_RE);
           if (m) {
             startDate = m[1];
-            endDate = m[2];
-          }
-        } else if (typeof ns.collectTextSpans === 'function') {
-          const spans = ns.collectTextSpans(row);
-          if (spans.length) {
-            const parsed = ns.parseRowSpans(spans);
-            school = parsed.title || school;
-            degree = parsed.secondary;
-            startDate = parsed.startDate;
-            endDate = parsed.endDate;
+            endDate = /\d{4}/.test(m[2]) ? m[2] : 'Present';
+            if (degree === lines[i]) degree = undefined;
+            break;
           }
         }
         const item = { school, degree, startDate, endDate };
-        if (item.school && !isAd(item)) out.push(item);
+        if (!item.school || isAd(item)) continue;
+        const key =
+          `${school}|${degree || ''}|${startDate || ''}|${endDate || ''}`.toLowerCase();
+        if (seenKey.has(key)) continue;
+        seenKey.add(key);
+        out.push(item);
       }
+    }
+    return out;
+  }
+
+  /**
+   * 2026 /details/education/ layout: entries are sibling block <div>s inside one
+   * list container (separated by <hr>). Some entries (e.g. a high school with no
+   * LinkedIn page) have NO a[href*="/school/"], so the anchor walker misses them.
+   * Walk the list container's children directly to capture every entry.
+   */
+  function extractEducationFromDetailsList(sec, normFn, isAd) {
+    if (!sec) return [];
+    const anchors = [...sec.querySelectorAll('a[href*="/school/"]')];
+    if (anchors.length < 2) return [];
+    // Lowest common ancestor of all school anchors == the entries' list parent.
+    let list = anchors[0].parentElement;
+    for (const a of anchors) {
+      while (list && !list.contains(a)) list = list.parentElement;
+    }
+    if (!list) return [];
+    // Tighten: if a single element child still holds every anchor, descend.
+    for (let guard = 0; guard < 6; guard++) {
+      const child = [...list.children].find(
+        (c) =>
+          c.nodeType === 1 &&
+          c.querySelectorAll('a[href*="/school/"]').length === anchors.length,
+      );
+      if (!child) break;
+      list = child;
+    }
+    const DATE_RE =
+      /(\d{4})\s*.*?[–\-]\s*.*?(\d{4}|present|presente|actualidad|en cours)/i;
+    const lineText = (el) => {
+      let ls = [...el.querySelectorAll('span[aria-hidden="true"], p')]
+        .map((n) => normFn(n.textContent || ''))
+        .filter(Boolean);
+      if (ls.length < 2) {
+        ls = (el.innerText || '')
+          .split('\n')
+          .map((s) => normFn(s))
+          .filter(Boolean);
+      }
+      return ls.filter(
+        (t) => !/^show all\b/i.test(t) && !/^grade\s*:/i.test(t),
+      );
+    };
+    const dedupe = (arr) => {
+      const r = [];
+      for (const t of arr) if (r[r.length - 1] !== t) r.push(t);
+      return r;
+    };
+    const out = [];
+    const seen = new Set();
+    for (const child of [...list.children]) {
+      if (child.nodeType !== 1 || child.tagName === 'HR') continue;
+      if (!(child.textContent || '').trim()) continue;
+      const lines = dedupe(lineText(child));
+      if (lines.length < 2 || !lines.some((l) => DATE_RE.test(l))) continue;
+      const school = lines[0];
+      let degree = lines[1];
+      let startDate;
+      let endDate;
+      for (let i = 1; i < lines.length; i++) {
+        const m = lines[i].match(DATE_RE);
+        if (m) {
+          startDate = m[1];
+          endDate = /\d{4}/.test(m[2]) ? m[2] : 'Present';
+          if (degree === lines[i]) degree = undefined;
+          break;
+        }
+      }
+      const item = { school, degree, startDate, endDate };
+      if (!item.school || isAd(item)) continue;
+      const key =
+        `${school}|${degree || ''}|${startDate || ''}|${endDate || ''}`.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(item);
     }
     return out;
   }
@@ -226,7 +299,14 @@
       isLikelyLinkedInAdEducation,
     );
 
+    const fromDetailsList = extractEducationFromDetailsList(
+      sec,
+      norm,
+      isLikelyLinkedInAdEducation,
+    );
+
     const ranked = [
+      { list: fromDetailsList, prio: 5 },
       { list: fromSchoolAnchors, prio: 4 },
       { list: fromEntities, prio: 3 },
       { list: fromGeneric, prio: 2 },

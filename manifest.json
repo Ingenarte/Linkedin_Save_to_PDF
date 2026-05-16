@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "LinkedIn Save to PDF (Ingenarte)",
   "short_name": "LinkedIn PDF",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Export a clean, print-ready view of your LinkedIn profile as PDF",
   "homepage_url": "https://github.com/Ingenarte/Linkedin_Save_to_PDF",
   "action": {
