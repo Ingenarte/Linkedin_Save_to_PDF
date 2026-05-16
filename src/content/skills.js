@@ -29,7 +29,8 @@
       )
     )
       return true;
-    if (/^\d+\s+endorsements?$/i.test(t)) return true;
+    // "5 endorsements", "99+ endorsements", "1 endorsement"
+    if (/^\d+\+?\s+endorsements?$/i.test(t)) return true;
     if (/^endorsed by\b/i.test(t)) return true;
     if (/^and \+\d+ skills?$/i.test(t)) return true;
     if (/^more profiles for you$/i.test(t)) return true;

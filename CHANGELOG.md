@@ -4,6 +4,15 @@ All notable changes to this extension will be documented here. The
 format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.5] — 2026-05-16
+
+### Fixed
+
+- **Top Skills: "99+ endorsements" leaked as a skill.** The endorsement-count
+  noise filter (`^\d+\s+endorsements?$`) did not match "99+ endorsements"
+  (the `+`). Allow an optional `+` so "5 endorsements" / "99+ endorsements" /
+  "1 endorsement" are all dropped (seen on reidhoffman deep).
+
 ## [1.2.4] — 2026-05-16
 
 ### Fixed
