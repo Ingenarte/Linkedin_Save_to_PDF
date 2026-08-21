@@ -1,4 +1,3 @@
-// Final pass: remove global duplicate phrases and print
 (function () {
   function finalGlobalPhraseDedup(root) {
     const seen = new Set();
@@ -11,7 +10,14 @@
       if (parent && parent.closest('a')) continue;
       const section = parent && parent.closest('section');
       const heading = section && section.querySelector('h2');
-      if (heading && heading.textContent.trim() === 'Languages') continue;
+      if (
+        heading &&
+        (heading.textContent.trim() === 'Languages' ||
+          heading.textContent.trim() === 'Top Skills' ||
+          heading.textContent.trim() === 'Courses' ||
+          heading.textContent.trim() === 'Recommendations')
+      )
+        continue;
 
       const raw = node.nodeValue || '';
       if (!raw.trim()) continue;

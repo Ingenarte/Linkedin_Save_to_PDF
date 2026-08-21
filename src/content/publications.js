@@ -1,4 +1,3 @@
-// publications.js
 (function () {
   const ns = (window.__lnp = window.__lnp || {});
   ns.extractPublications = function extractPublications() {
@@ -23,20 +22,18 @@
 
     const out = [];
 
-    // 2026 SDUI: spans = [title, "Source · Date", description?, "Show publication"?].
     if (typeof ns.collectGenericRows === 'function') {
       const rows = ns.collectGenericRows(sec);
       for (const r of rows) {
         const spans = ns.collectTextSpans(r);
         if (!spans.length || spans.some(isAdNoise)) continue;
         let title = dedupeText(spans[0]);
-        if (!title || /^show publication/i.test(title) || isAdNoise(title))
+        if (!title || /^show publication/i.test(title) || isAdNoise(title) || /nothing to see for now|when you add new publications|show up here/i.test(title))
           continue;
         let source, date, description;
         for (let i = 1; i < spans.length; i++) {
           const s = spans[i];
           if (/^show publication/i.test(s) || isAdNoise(s)) continue;
-          // "Source · MMM YYYY" or "Source · MMM D, YYYY"
           const dotMatch = s.match(
             /^(.+?)\s*[·•]\s*([A-Za-z]{3,}\s+\d{1,2},?\s*\d{4}|[A-Za-z]{3,}\s+\d{4}|\d{4})$/,
           );

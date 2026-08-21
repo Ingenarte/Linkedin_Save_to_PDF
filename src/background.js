@@ -41,24 +41,19 @@
 const DEEP_SECTION_SLUGS = {
   experience: 'experience',
   education: 'education',
+  projects: 'projects',
+  courses: 'courses',
   certifications: 'certifications',
   skills: 'skills',
   languages: 'languages',
   honors: 'honors',
   publications: 'publications',
+  recommendations: 'recommendations',
 };
 
-// Per-section timeout and throttle. Tab load stays bounded; the
-// content script uses budgetMs so each /details/ page does not spend
-// tens of seconds scrolling.
 const TAB_LOAD_TIMEOUT_MS = 12000;
 const POST_LOAD_SETTLE_MS = 200;
-// Virtualized SDUI lists (experience, education) need more time before
-// scroll+extract when the tab was created in the background (we avoid
-// activating that tab so the user's DevTools / focus stay on the profile).
 const POST_LOAD_SETTLE_LIST_HEAVY_MS = 900;
-// Hard caps for expand+extract per deep tab. Heavy virtualized sections
-// keep a larger ceiling; compact sections should not pay that cost.
 const DEEP_SECTION_EXTRACT_BUDGET_MS = 5200;
 const INTER_TAB_THROTTLE_MS = 500;
 const INTER_TAB_THROTTLE_HEAVY_MS = 800;
@@ -69,7 +64,6 @@ const SINGLE_PAGE_ROOT_TIMEOUT_MS = 15000;
 const DEEP_JOB_STORAGE_PREFIX = 'lnp_deep_job_';
 const DEEP_JOB_TTL_MS = 15 * 60 * 1000;
 
-/** Same file list and order as `content_scripts` in manifest.json. */
 const LNP_CONTENT_SCRIPT_FILES = [
   'src/content/ns.js',
   'src/content/utils.js',
@@ -79,38 +73,38 @@ const LNP_CONTENT_SCRIPT_FILES = [
   'src/content/about.js',
   'src/content/experience.js',
   'src/content/education.js',
+  'src/content/projects.js',
+  'src/content/courses.js',
   'src/content/certifications.js',
   'src/content/publications.js',
   'src/content/skills.js',
   'src/content/languages.js',
   'src/content/honors.js',
+  'src/content/recommendations.js',
   'src/content/content.js',
 ];
 
-// Human-readable labels for deep-export progress (popup UI, English).
 const DEEP_SECTION_LABELS = {
   experience: 'Experience',
   education: 'Education',
+  projects: 'Projects',
+  courses: 'Courses',
   certifications: 'Certifications',
   skills: 'Skills',
   languages: 'Languages',
   honors: 'Honors & awards',
   publications: 'Publications',
+  recommendations: 'Recommendations',
 };
 
 const DEEP_SECTION_TIMING = {
   experience: { budgetMs: 5200, settleMs: 900, postPingMs: 250, retrySettleMs: 650, weight: 'full list' },
-  // education: higher settle + budget so headless/GPU-less Chromium (e.g. Linode)
-  // has time to hydrate all SDUI rows before scroll extraction starts.
   education: { budgetMs: 9000, settleMs: 1800, postPingMs: 400, retrySettleMs: 1500, weight: 'full list' },
-  // skills: virtualized full list — needs the education-class budget so the
-  // background/active tab hydrates ALL rows before extraction. 5200/900 was
-  // still too short (flaky 2-vs-10 between runs).
   skills: { budgetMs: 9000, settleMs: 1800, postPingMs: 400, retrySettleMs: 1500, weight: 'full list' },
-  // certifications: 2026 /details/certifications/ lazy-renders the 2nd+ certs,
-  // so a background tab with only 900ms settle saw just the 1st cert (Luca,
-  // Franco). Match the education-class budget so all rows hydrate first.
   certifications: { budgetMs: 9000, settleMs: 1800, postPingMs: 400, retrySettleMs: 1500, weight: 'full list' },
+  projects: { budgetMs: 6000, settleMs: 1200, postPingMs: 250, retrySettleMs: 800, weight: 'full list' },
+  courses: { budgetMs: 5000, settleMs: 1000, postPingMs: 200, retrySettleMs: 600, weight: 'full list' },
+  recommendations: { budgetMs: 6000, settleMs: 1200, postPingMs: 250, retrySettleMs: 800, weight: 'full list' },
   languages: { budgetMs: 2200, settleMs: 150, postPingMs: 0, retrySettleMs: 0, weight: 'fast' },
   honors: { budgetMs: 2400, settleMs: 150, postPingMs: 0, retrySettleMs: 0, weight: 'fast' },
   publications: { budgetMs: 2400, settleMs: 150, postPingMs: 0, retrySettleMs: 0, weight: 'fast' },
@@ -404,6 +398,9 @@ function sanitizeExportPayload(value) {
 
 function buildDetailsUrl(slug, sectionSlug) {
   const safeSlug = encodeURIComponent(slug).replace(/%2F/gi, '/');
+  if (sectionSlug === 'recommendations') {
+    return `https://www.linkedin.com/in/${safeSlug}/details/recommendations/?detailScreenTabIndex=0`;
+  }
   return `https://www.linkedin.com/in/${safeSlug}/details/${sectionSlug}/`;
 }
 
@@ -721,7 +718,10 @@ async function fetchDeepSection(
     section === 'experience' ||
     section === 'education' ||
     section === 'skills' ||
-    section === 'certifications';
+    section === 'certifications' ||
+    section === 'projects' ||
+    section === 'courses' ||
+    section === 'recommendations';
   const activeRetrySection = listSection || section === 'languages';
   const timing = deepSectionTiming(section);
 
@@ -853,11 +853,14 @@ function plannedDeepSections(settings) {
   const order = [
     'experience',
     'education',
+    'projects',
+    'courses',
     'certifications',
     'skills',
     'languages',
     'honors',
     'publications',
+    'recommendations',
   ];
   return order.filter((s) => !!settings?.[s]);
 }
@@ -1166,11 +1169,14 @@ const DEFAULT_EXPORT_SETTINGS = {
   about: true,
   experience: true,
   education: true,
+  projects: true,
+  courses: true,
   certifications: true,
   skills: true,
   languages: true,
   honors: true,
   publications: true,
+  recommendations: true,
 };
 
 const SETTINGS_STORAGE_KEY = 'lnp_settings_v1';

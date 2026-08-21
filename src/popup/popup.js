@@ -11,13 +11,14 @@ const DEFAULT_SETTINGS = {
   about: true,
   experience: true,
   education: true,
+  projects: true,
+  courses: true,
   certifications: true,
   skills: true,
   languages: true,
   honors: true,
   publications: true,
-  // Dark mode (popup UI only). Print/PDF output stays light to keep
-  // recruiter-friendly defaults.
+  recommendations: true,
   darkMode: false,
 };
 
@@ -124,7 +125,6 @@ function humanizeProfileSlug(slug) {
 const MSG_OPEN_PROFILE_TAB =
   'Open a LinkedIn profile tab to use this extension.';
 
-/** Same file list and order as `content_scripts` in manifest.json (for re-inject). */
 const LNP_CONTENT_SCRIPT_FILES = [
   'src/content/ns.js',
   'src/content/utils.js',
@@ -134,11 +134,14 @@ const LNP_CONTENT_SCRIPT_FILES = [
   'src/content/about.js',
   'src/content/experience.js',
   'src/content/education.js',
+  'src/content/projects.js',
+  'src/content/courses.js',
   'src/content/certifications.js',
   'src/content/publications.js',
   'src/content/skills.js',
   'src/content/languages.js',
   'src/content/honors.js',
+  'src/content/recommendations.js',
   'src/content/content.js',
 ];
 
