@@ -154,6 +154,9 @@
   // "· 1st" or LinkedIn variants like "· You" / "· You followed".
   const DEGREE_RE = /^\s*[·•‧]?\s*(?:1st|2nd|3rd|\dth|you(?:\s|$)|t[uú]\s)/i;
 
+  const PRONOUNS_RE =
+    /^\s*(?:he\s*\/\s*him(?:\s*\/\s*his)?|she\s*\/\s*her(?:\s*\/\s*hers)?|they\s*\/\s*them(?:\s*\/\s*theirs)?|he\s*\/\s*they|she\s*\/\s*they|any pronouns?|[eé]l\s*\/\s*[eé]l|ella\s*\/\s*ella)\s*$/i;
+
   // Looks like a geographic location ("Milan, Lombardy, Italy",
   // "Buenos Aires, Argentina", "Greater London Area"). LinkedIn never
   // uses "·" in the location line and the line never starts with a
@@ -168,6 +171,22 @@
     if (!t) return true;
     if (DEGREE_RE.test(t)) return true;
     if (/^[·•‧\s]+$/.test(t)) return true;
+    return false;
+  }
+
+  function isTopcardNoise(txt) {
+    if (!txt) return true;
+    const t = ns.norm(txt);
+    if (!t) return true;
+    if (isDegreeNoise(t)) return true;
+    if (PRONOUNS_RE.test(t)) return true;
+    if (/^contact\s+info$/i.test(t)) return true;
+    if (/^verify(?:\s+in\s+\d+\s+minutes?|\s+now|\s+your\s+identity|\s+your\s+profile)?$/i.test(t)) return true;
+    if (/^(?:get\s+verified|add\s+verification|verification\s+badge)$/i.test(t)) return true;
+    if (/^(?:open\s+to\s+work|hiring|providing\s+services)$/i.test(t)) return true;
+    if (/modal window|press esc|press escape|video player|^\s*close\s*$/i.test(t)) return true;
+    if (/^\d[\d.,+]*\s*(?:connections|followers|seguidores|conexi[oó]nes)?$/i.test(t)) return true;
+    if (/^connections?$|^followers?$|^seguidores?$/i.test(t)) return true;
     return false;
   }
 
@@ -189,22 +208,7 @@
       if (!txt) continue;
       if (p.tagName === 'H2') continue;
       if (txt === name) continue;
-      if (isDegreeNoise(txt)) continue;
-      if (/^contact\s+info$/i.test(txt)) continue;
-      // Video / media modals sometimes inject copy into the top card region.
-      if (
-        /modal window|press esc|press escape|video player|^\s*close\s*$/i.test(
-          txt,
-        )
-      )
-        continue;
-      if (
-        /^\d[\d.,+]*\s*(?:connections|followers|seguidores|conexi[oó]nes)?$/i.test(
-          txt,
-        )
-      )
-        continue;
-      if (/^connections?$|^followers?$|^seguidores?$/i.test(txt)) continue;
+      if (isTopcardNoise(txt)) continue;
 
       if (!headline) {
         headline = txt;
@@ -312,9 +316,12 @@
       profileImage = getOgImage();
     }
 
+    let cleanHeadline = norm(headline);
+    if (cleanHeadline && PRONOUNS_RE.test(cleanHeadline)) cleanHeadline = undefined;
+
     return {
       name: normalizedName || 'LinkedIn Profile',
-      headline: norm(headline),
+      headline: cleanHeadline,
       location,
       profileImage,
     };

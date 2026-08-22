@@ -1,7 +1,7 @@
 // content.js (main orchestrator)
 // IMPORTANT: This file assumes the following have already been loaded in this order:
 // utils.js, jsonld.js, header.js, contact.js, about.js, experience.js,
-// education.js, certifications.js, publications.js, skills.js,
+// education.js, projects.js, certifications.js, publications.js, skills.js,
 // languages.js, honors.js
 
 // Main Orchestrator using namespace functions
@@ -74,44 +74,10 @@
   }
 
   function extractContact() {
-    function uniqueByCI(arr) {
-      const out = [];
-      const seen = new Set();
-      for (const v of arr || []) {
-        const t = (v || '').replace(/\s+/g, ' ').trim();
-        if (!t) continue;
-        const k = t.toLowerCase();
-        if (seen.has(k)) continue;
-        seen.add(k);
-        out.push(t);
-      }
-      return out;
+    if (ns.extractContact && typeof ns.extractContact === 'function') {
+      return ns.extractContact();
     }
-    const QA = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-    const raw = uniqueByCI(
-      QA('a[href^="mailto:"], a[href^="https://"], a[href^="http://"]')
-        .map((a) => a.getAttribute('href'))
-        .filter(Boolean),
-    );
-    const isInternalLinkedIn = (u) => {
-      try {
-        const url = new URL(u);
-        if (!/^https?:/i.test(url.protocol)) return false;
-        return (
-          url.hostname.endsWith('linkedin.com') || url.hostname === 'lnkd.in'
-        );
-      } catch {
-        return false;
-      }
-    };
-    const email = raw.find((h) => /^mailto:/i.test(h));
-    const websites = raw
-      .filter((h) => /^https?:\/\//i.test(h) && !isInternalLinkedIn(h))
-      .slice(0, 5);
-    return {
-      email: email ? email.replace(/^mailto:/i, '') : undefined,
-      websites: websites.length ? websites : undefined,
-    };
+    return {};
   }
 
   // Expands lazy-loaded UI before extraction so collapsed sections
@@ -170,6 +136,8 @@
       ? ns.extractExperience()
       : undefined;
     const education = ns.extractEducation ? ns.extractEducation() : undefined;
+    const projects = ns.extractProjects ? ns.extractProjects() : undefined;
+    const courses = ns.extractCourses ? ns.extractCourses() : undefined;
     const certifications = ns.extractCertifications
       ? ns.extractCertifications()
       : undefined;
@@ -180,6 +148,9 @@
       : undefined;
     const publications = ns.extractPublications
       ? ns.extractPublications()
+      : undefined;
+    const recommendations = ns.extractRecommendations
+      ? ns.extractRecommendations()
       : undefined;
 
     const data = {
@@ -192,11 +163,14 @@
       about,
       experiences,
       education,
+      projects,
+      courses,
       certifications,
       skills,
       languages,
       honors,
       publications,
+      recommendations,
       lastUpdatedISO: new Date().toISOString(),
     };
     return typeof ns.sanitizeExportPayload === 'function'
@@ -204,22 +178,20 @@
       : data;
   }
 
-  // Maps a section name (as used by the deep-export orchestrator) to the
-  // namespaced extractor function that produces its payload.
   const SECTION_EXTRACTORS = {
     about: 'extractAbout',
     experience: 'extractExperience',
     education: 'extractEducation',
+    projects: 'extractProjects',
+    courses: 'extractCourses',
     certifications: 'extractCertifications',
     skills: 'extractSkills',
     languages: 'extractLanguages',
     honors: 'extractHonorsAwards',
     publications: 'extractPublications',
+    recommendations: 'extractRecommendations',
   };
 
-  // Runs a single section extractor after ensuring lazy content is
-  // loaded. Used by the background service worker when performing a
-  // deep export from a /details/<section>/ sub-page.
   async function extractSection(msg) {
     const section = typeof msg === 'string' ? msg : msg?.section;
     const budgetMs =
@@ -443,11 +415,14 @@
     about: true,
     experience: true,
     education: true,
+    projects: true,
+    courses: true,
     certifications: true,
     skills: true,
     languages: true,
     honors: true,
     publications: true,
+    recommendations: true,
   };
   let automationBridgeBusy = false;
   try {

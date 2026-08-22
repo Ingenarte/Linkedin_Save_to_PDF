@@ -18,11 +18,13 @@
       return true;
     const low = t.toLowerCase();
     if (
-      /^(skills|all|endorse|show all|see more|message|follow|connect|show more)$/i.test(
+      /^(skills|all|endorse|show all|see more|message|follow|connect|show more|reorder|add skill|demonstrate skills|take skill quiz)$/i.test(
         t,
       )
     )
       return true;
+    if (/maximum number of skills/i.test(low)) return true;
+    if (/you(?:'|’)ve added the maximum/i.test(low)) return true;
     if (
       /^(industry knowledge|interpersonal skills|tools & technologies|tools and technologies|other skills|aptitudes|habilidades|herramientas y tecnolog[ií]as|conocimiento del sector)$/i.test(
         t,
@@ -163,7 +165,7 @@
             ? hrs[0].parentElement
             : listRoot) || listRoot;
         const SECTION_BREAK_RE =
-          /^(honors?\s*&?\s*awards?|honores|publications?|publicaciones|recommendations?|recomendaciones|interests?|intereses|languages?|idiomas|education|educaci[oó]n|experience|certifications?|licen[sc]es|people also|más perfiles|more profiles|nothing to see)\b/i;
+          /^(projects?|proyectos|projeler|honors?\s*&?\s*awards?|honores|publications?|publicaciones|recommendations?|recomendaciones|interests?|intereses|languages?|idiomas|education|educaci[oó]n|experience|certifications?|licen[sc]es|people also|más perfiles|more profiles|nothing to see)\b/i;
         const groups = [];
         let cur = [];
         let stop = false;

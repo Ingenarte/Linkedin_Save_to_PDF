@@ -80,11 +80,14 @@
     if (settings.about) R.renderAbout(root, profile);
     if (settings.experience) R.renderExperience(root, profile);
     if (settings.education) R.renderEducation(root, profile);
+    if (settings.projects) R.renderProjects(root, profile);
+    if (settings.courses) R.renderCourses(root, profile);
     if (settings.certifications) R.renderCertifications(root, profile);
     if (settings.skills) R.renderSkills(root, profile);
     if (settings.languages) R.renderLanguages(root, profile);
     if (settings.honors) R.renderHonors(root, profile);
     if (settings.publications) R.renderPublications(root, profile);
+    if (settings.recommendations) R.renderRecommendations(root, profile);
 
     const footer = el('footer', '');
     footer.append(

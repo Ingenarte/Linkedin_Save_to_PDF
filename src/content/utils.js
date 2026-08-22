@@ -1,5 +1,4 @@
 // src/content/utils.js
-// Shared helpers (attached to a single global namespace to avoid ES module usage in MV3 content scripts)
 (function (w) {
   // Unified namespace
   const ns = (w.__LNP_NS__ = w.__LNP_NS__ || {});
@@ -8,8 +7,8 @@
 
   // DOM helpers
   ns.T = (el) => ((el && el.textContent) || '').trim();
-  ns.Q = (sel, root = document) => root.querySelector(sel);
-  ns.QA = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+  ns.Q = (sel, root = document) => (root || document).querySelector(sel);
+  ns.QA = (sel, root = document) => Array.from((root || document).querySelectorAll(sel));
   ns.norm = (s) => (s ? s.replace(/\s+/g, ' ').trim() : s);
 
   ns.isLinkedInAdOrPreferenceText = (text) => {
@@ -28,7 +27,7 @@
     )
       return true;
     if (
-      /\b(why am i seeing this ad|manage your ad preferences|i don'?t want to see this ad|ad choices|advertising choices)\b/.test(
+      /\b(why am i seeing this ad|manage your ad preferences|i don'?t want to see this ad|ad choices|advertising choices|visit our help center|recommendation transparency|recommended content|community guidelines|guest controls|brand policy|copyright policy|user agreement)\b/.test(
         low,
       )
     )
@@ -37,12 +36,20 @@
       compact.includes('why am i seeing this ad') ||
       compact.includes('manage your ad preferences') ||
       compact.includes("i don't want to see this ad") ||
-      compact.includes('i dont want to see this ad')
+      compact.includes('i dont want to see this ad') ||
+      compact.includes('visit our help center') ||
+      compact.includes('manage your account and privacy') ||
+      compact.includes('go to your settings') ||
+      compact.includes('recommendation transparency') ||
+      compact.includes('learn more about recommended content') ||
+      compact.includes('community guidelines') ||
+      compact.includes('guest controls') ||
+      compact.includes('linkedin corporation') ||
+      compact.includes('help center') ||
+      compact === 'questions' ||
+      compact === 'questions?'
     )
       return true;
-    // LinkedIn ad *report/feedback* strings (from the ad "···" menu). These
-    // leak into Languages when a profile has 0-1 languages and an ad block is
-    // rendered inside the /details/languages area (seen on Luca & Martin).
     if (
       compact.includes('seen the same ad too often') ||
       compact.includes('goes against our professional community policies') ||
@@ -52,6 +59,9 @@
     )
       return true;
     if (/^[-–—·•]*\s*manage your ad preferences$/i.test(t)) return true;
+    if (/^questions\??\s*[-–—·•]*\s*visit our help center/i.test(t)) return true;
+    if (/^manage your account and privacy/i.test(t)) return true;
+    if (/^recommendation transparency/i.test(t)) return true;
     return false;
   };
 
@@ -350,7 +360,7 @@
   // Must NEVER click global nav menus, avatar/popover triggers, post "..."
   // menus, or any element that opens a menu/dialog/listbox — clicking those
   // causes multiple LinkedIn dropdowns to open simultaneously.
-  ns.EXPAND_TEXT_RE = /see more|show more|show all|\.{2,3}\s*more\b/i;
+  ns.EXPAND_TEXT_RE = /see more|show more|show all|\.{2,3}\s*more\b|daha fazla|devamını gör|ver más|mehr/i;
 
   // aria-haspopup values that indicate a menu/dialog trigger (never click).
   ns.POPUP_HASPOPUP_VALUES = new Set([
@@ -380,6 +390,9 @@
   //  - visible text matches an expansion phrase
   ns.isSafeExpander = (el) => {
     if (!el) return false;
+    if (el.tagName === 'A' && el.getAttribute('href')) return false;
+    if (el.closest && el.closest('a[href]')) return false;
+    if (el.closest && el.closest('[componentkey*="Activity" i], [componentkey*="Featured" i], nav, footer, aside')) return false;
     const main = document.querySelector('main');
     if (main && !main.contains(el)) return false;
     if (ns.isPopupTrigger(el)) return false;
@@ -601,29 +614,21 @@
 
   ns.hasHeader = (sec, re) => {
     if (!sec) return false;
-    const h = sec.querySelector('h1, h2, h3, header h1, header h2, header h3');
-    return re.test((h && h.textContent) || '');
+    const headings = sec.querySelectorAll('h1, h2, h3, h4, header h1, header h2, header h3, .pvs-header__title');
+    for (const h of headings) {
+      if (re.test((h && h.textContent) || '')) return true;
+    }
+    return false;
   };
 
-  // Finds the first <section> in <main> whose `componentkey` attribute
-  // matches one of the given suffix patterns. LinkedIn uses several
-  // naming variants in the wild — for example, the Experience card
-  // can be `...Experience`, `...ExperienceTopLevelSection`, the
-  // Languages card can be `...LanguageTopLevel` (singular), and the
-  // Certifications card can be `...CertificationTopLevel`.
-  //
-  // Accepts:
-  //   - a single string suffix          ("Experience")
-  //   - an array of string suffixes     (["Experience", "ExperienceTopLevelSection"])
-  //   - a RegExp tested against the key (componentkey itself)
   ns.getSectionByComponentkey = (matcher) => {
     if (!matcher) return null;
     const main = document.querySelector('main') || document;
-    const all = main.querySelectorAll('section[componentkey]');
+    const all = main.querySelectorAll('section[componentkey], div[componentkey]');
     const matches = (ck) => {
       if (matcher instanceof RegExp) return matcher.test(ck);
       const list = Array.isArray(matcher) ? matcher : [matcher];
-      return list.some((suf) => ck.endsWith(suf));
+      return list.some((suf) => ck.includes(suf) || ck.endsWith(suf));
     };
     for (const s of all) {
       const ck = s.getAttribute('componentkey') || '';
@@ -736,6 +741,9 @@
       languages: [/Language/i],
       honors: [/Honor/i, /Award/i],
       publications: [/Publication/i],
+      projects: [/Project/i],
+      courses: [/Course/i],
+      recommendations: [/Recommendation/i],
     };
     const patterns = hints[String(key).toLowerCase()];
     if (!patterns) return null;
@@ -755,6 +763,9 @@
     languages: [/LanguageDetails/i],
     honors: [/HonorDetails/i, /AwardDetails/i],
     publications: [/PublicationDetails/i],
+    projects: [/ProjectDetails/i, /ProjectsDetails/i],
+    courses: [/CourseDetails/i, /CoursesDetails/i],
+    recommendations: [/RecommendationDetails/i, /RecommendationsDetails/i],
   };
 
   ns.isSupportedLocalesRoot = (node) => {
@@ -832,7 +843,19 @@
         return q('a[href*="/company/"]') + q('a[href*="/positions/"]') * 2;
       if (k === 'education')
         return q('a[href*="/school/"]') + q('a[href*="/company/"]');
-      if (k === 'certifications' || k === 'honors' || k === 'publications') {
+      if (k === 'courses') {
+        let score = q('li') * 10 + q('span') + (node.innerText || node.textContent || '').length;
+        const txt = (node.innerText || node.textContent || '').toLowerCase();
+        if (/why am i seeing this ad|manage your ad preferences/.test(txt)) score -= 80;
+        return score;
+      }
+      if (k === 'recommendations') {
+        let score = q('li') * 10 + q('.inline-show-more-text') * 20 + q('a[href*="/in/"]') * 15 + (node.innerText || node.textContent || '').length;
+        const txt = (node.innerText || node.textContent || '').toLowerCase();
+        if (/why am i seeing this ad|manage your ad preferences/.test(txt)) score -= 80;
+        return score;
+      }
+      if (k === 'certifications' || k === 'honors' || k === 'publications' || k === 'projects') {
         let score = q('a[href]');
         const txt = (node.innerText || node.textContent || '').toLowerCase();
         if (/why am i seeing this ad|manage your ad preferences/.test(txt))
@@ -858,8 +881,9 @@
             ) || wrap;
         }
       }
-      const node = scroll || el.closest('section[componentkey]') || el.closest('section');
-      pushCandidate(node);
+      if (scroll) pushCandidate(scroll);
+      const s = el.closest('section') || el.closest('[role="region"]');
+      if (s) pushCandidate(s);
     };
     for (const el of headings) {
       if (el.closest('nav, footer, header[role="banner"]')) continue;
@@ -919,7 +943,7 @@
     else if (k === 'skills') selector = 'a[href*="/skills/"]';
     else if (k === 'languages' || k === 'certifications')
       selector = 'a[href]';
-    else if (k === 'honors' || k === 'publications') selector = 'a[href]';
+    else if (k === 'honors' || k === 'publications' || k === 'projects' || k === 'courses' || k === 'recommendations') selector = 'a[href]';
 
     const anchors = Array.from(mainEl.querySelectorAll(selector)).filter(
       (a) => !a.closest('nav, footer, aside'),
@@ -977,6 +1001,30 @@
       'LicensesAndCertifications',
       'SyntheticCertifications',
     ],
+    projects: [
+      'Projects',
+      'ProjectsTopLevel',
+      'ProjectTopLevel',
+      'ProjectsTopLevelSection',
+      'ProjectTopLevelSection',
+      'Accomplishments',
+      'AccomplishmentsTopLevel',
+      'AccomplishmentsTopLevelSection',
+    ],
+    courses: [
+      'Courses',
+      'CoursesTopLevel',
+      'CourseTopLevel',
+      'CoursesTopLevelSection',
+      'CourseTopLevelSection',
+    ],
+    recommendations: [
+      'Recommendations',
+      'RecommendationsTopLevel',
+      'RecommendationTopLevel',
+      'RecommendationsTopLevelSection',
+      'RecommendationTopLevelSection',
+    ],
     skills: ['Skills', 'SkillsTopLevel'],
     languages: ['Languages', 'LanguagesTopLevel', 'LanguageTopLevel'],
     honors: [
@@ -998,10 +1046,6 @@
     contact: ['ContactInfo'],
   };
 
-  // Heading regex used as a locale-aware fallback when SDUI metadata is
-  // missing. English is the canonical key; common Spanish/Portuguese
-  // translations are added because the user base of this extension is
-  // mostly Latin American.
   ns.SECTION_HEADING = {
     about:
       /^about|acerca de|sobre|resumen|summary|samenvatting|über mich|überblick$/i,
@@ -1009,6 +1053,9 @@
     education: /^education|educaci[oó]n|formaci[oó]n acad[eé]mica$/i,
     certifications:
       /^licenses? *&* *certifications?|certifications?|licencias y certificaciones|certificados?$/i,
+    projects: /projects?|proyectos?|projetos?|projeler|projelerim|proje\b/i,
+    courses: /courses?|kurslar|cursos|kurse/i,
+    recommendations: /recommendations?|tavsiyeler|recomendaciones|empfehlungen/i,
     skills: /^skills|aptitudes|habilidades|compet[eê]ncias$/i,
     languages: /^languages|idiomas$/i,
     honors: /^honors *&* *awards|honors|awards|logros|distinciones|premios$/i,
@@ -1127,6 +1174,18 @@
     if (headingRe) {
       const sec = ns.getSectionByHeading(headingRe);
       if (sec) return sec;
+    }
+    if (key) {
+      const anchor = document.getElementById(key) || document.querySelector(`[id*="${key}" i]`);
+      if (anchor) {
+        const secAnchor = anchor.closest('section, [role="region"], .artdeco-card');
+        if (secAnchor) return secAnchor;
+      }
+      const detailLink = document.querySelector(`main a[href*="/details/${key}"], a[href*="/details/${key}"]`);
+      if (detailLink) {
+        const secLink = detailLink.closest('section, [role="region"], .artdeco-card');
+        if (secLink) return secLink;
+      }
     }
     if (
       key &&
