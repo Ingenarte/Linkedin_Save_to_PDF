@@ -3,7 +3,7 @@
 > **Audience.** Chrome Web Store reviewers, LinkedIn legal/operations,
 > and security-conscious end users.
 >
-> **Scope.** Version 1.1.0 of `LinkedIn Save to PDF (Ingenarte)`
+> **Scope.** Version 1.3.0 of `LinkedIn Save to PDF (Ingenarte)`
 > (Manifest V3, MV3). This document explains why each design choice
 > stays within the LinkedIn User Agreement and the Chrome Web Store
 > Developer Program Policies.
@@ -161,7 +161,7 @@ We deliberately do NOT request:
 
 `PRIVACY.md` and `PRIVACY.html` are bundled with the extension and
 linked from the Chrome Web Store listing. They restate the "no remote
-code, no data leaves the device" guarantee. Version 1.1.0 makes no
+code, no data leaves the device" guarantee. Version 1.3.0 makes no
 changes to the data we collect (zero) or the data we transmit (zero).
 
 ## 6. Code transparency

@@ -371,7 +371,13 @@
             const nonce = `lnp_${Date.now()}_${Math.random()
               .toString(36)
               .slice(2)}`;
-            const payload = { [nonce]: { data, settings: msg.settings } };
+            const payload = {
+              [nonce]: {
+                data,
+                settings: msg.settings,
+                exportKind: 'basicexport',
+              },
+            };
             chrome.storage.local.set(payload, () => {
               clearTimeout(hangTimer);
               const err = chrome.runtime.lastError;

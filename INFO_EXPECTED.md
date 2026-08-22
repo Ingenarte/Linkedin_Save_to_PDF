@@ -1,5 +1,7 @@
 # Expected export content (design checklist)
 
+**Extension version:** 1.3.0
+
 **Purpose:** Maintainer and QA reference for what the extension is **designed** to put into the print/PDF view when extraction succeeds. This is not a guarantee that every field appears for every profile (LinkedIn DOM, locale, privacy, and extractor limits vary).
 
 **Settings:** User toggles are stored in `chrome.storage.sync` under `lnp_settings_v1`. Defaults match `DEFAULT_SETTINGS` in `src/popup/popup.js` and `DEFAULT_EXPORT_SETTINGS` in `src/background.js` (export keys only; `darkMode` is popup UI-only).
@@ -18,20 +20,22 @@ Single-page flow runs one full `EXTRACT_PROFILE` on the active profile tab, then
    - Display name as heading; link to public profile URL when `contact.publicProfile` or derivable slug exists.  
    - Headline line when `headline` is non-empty.  
    - Meta line: location (if any), public path link `/in/{slug}` (if slug present), and `Exported: …` (local datetime) when `lastUpdatedISO` is set.  
-   - *Gating note:* Header is shown when `settings.profileHeader !== false` (default-on even if the key is missing).
+   - *Gating note:* Header is shown when `settings.profileHeader !== false` (default-on even if the key is missing).  
+   - Print filename (Chrome Save as PDF uses `document.title`): `linkedin_{name}_{basicexport|fullexport}_{dd}_{mm}_{yyyy}.pdf`.
 
 2. **`withPhoto` — Include profile photo**  
    - Only when **both** this toggle is on **and** `profileImage` URL exists after extraction: a fixed-size profile image in the header block (`print-render-header.js`).
 
 3. **`contact` — Contact**  
    - Section title “Contact”.  
+   - Optional location line (also printed in the header meta when `profileHeader` is on).  
    - Public profile link (from tab-derived URL), when `contact.publicProfile` is set.  
    - Email line (`mailto` target text) when `contact.email` is set.  
-   - Bullet list of external website URLs (up to what extraction collected), each as a link (`print-render-sections.js` / `content.js` enrichment).
+   - External website URLs (up to 5), including social hosts. LinkedIn safety/go redirects are unwrapped first.
 
 4. **`about` — Summary (About)**  
    - Section title “Summary”.  
-   - Full about text as a paragraph when `about` is non-empty.
+   - Full about text when `about` is non-empty. Extraction prefers `sectionVisibleText` (2026 SDUI full body already in the DOM), then legacy wrappers. Print may split paragraphs.
 
 5. **`experience` — Experience**  
    - Section title “Experience”.  
@@ -66,6 +70,15 @@ Single-page flow runs one full `EXTRACT_PROFILE` on the active profile tab, then
     - Section title “Publications”.  
     - Per item: title and source combined line; optional date; optional description paragraph.
 
+13. **`courses` — Courses**  
+    - Section title “Courses”.  
+    - Per item: course name; optional number; optional associated-with line.
+
+14. **`recommendations` — Recommendations (Received)**  
+    - Section title “Recommendations”.  
+    - Received recommendations only in this version (deep URL uses `detailScreenTabIndex=0`).  
+    - Per item: recommender name and optional title; optional relationship; recommendation text.
+
 ---
 
 ## 2. Deep export (“Full profile” / deep)
@@ -75,7 +88,7 @@ Deep export still ends in the **same** print pipeline as single-page (`openPrint
 ### 2.1 Pipeline (high level)
 
 - **Base:** The background script requests `EXTRACT_PROFILE` on the **original** profile tab (`content.js` `extractAll`) — same payload shape as single-page, including expand/scroll behavior for that tab.  
-- **Deep passes:** For each section name returned by `plannedDeepSections(settings)` in **fixed order** — `experience` → `education` → `projects` → `certifications` → `skills` → `languages` → `honors` → `publications` — the service worker opens the matching LinkedIn `/details/<slug>/` URL (see `DEEP_SECTION_SLUGS` in `src/background.js`), runs `EXTRACT_SECTION` with a time budget for scroll/expand, then merges the result into the working payload when merge rules say the deep slice is at least as good as the base slice (`shouldApplyDeepMerge`, except languages — see below).  
+- **Deep passes:** For each section name returned by `plannedDeepSections(settings)` in **fixed order** — `experience` → `education` → `projects` → `courses` → `certifications` → `skills` → `languages` → `honors` → `publications` → `recommendations` — the service worker opens the matching LinkedIn `/details/<slug>/` URL (see `DEEP_SECTION_SLUGS` in `src/background.js`), runs `EXTRACT_SECTION` with a time budget for scroll/expand, then merges the result into the working payload when merge rules say the deep slice is at least as good as the base slice (`shouldApplyDeepMerge`, except languages — see below). Recommendations deep uses `/details/recommendations/?detailScreenTabIndex=0` (Received).  
 - **Print:** The merged object is stored and passed to `print.html`; toggles in Section 1 still **gate** which sections render.
 
 ### 2.2 Per deep-capable toggle (when ON)
@@ -85,11 +98,13 @@ Deep export still ends in the **same** print pipeline as single-page (`openPrint
 1. **`experience`** — Deep may replace `experiences` when the `/details/experience/` extract is merged in; expect **more roles and/or fuller fields** (title, dates, duration, location, description, bullets) than a truncated main-profile list.  
 2. **`education`** — Same idea for `education` via `/details/education/`.  
 3. **`projects`** — Same idea for `projects` via `/details/projects/`.  
-4. **`certifications`** — Same for `certifications` via `/details/certifications/`.  
-5. **`skills`** — Same for `skills` via `/details/skills/`.  
-6. **`languages`** — **Special case:** Base and deep language arrays are **union-merged** by normalized language key (`mergeLanguageLists`); deep can add or fill proficiency without dropping base-only rows when the merge grows the combined list.  
-7. **`honors`** — Same replacement/merge pattern as other array sections via `/details/honors/`.  
-8. **`publications`** — Same via `/details/publications/`.
+4. **`courses`** — Same for `courses` via `/details/courses/`.  
+5. **`certifications`** — Same for `certifications` via `/details/certifications/`.  
+6. **`skills`** — Same for `skills` via `/details/skills/`.  
+7. **`languages`** — **Special case:** Base and deep language arrays are **union-merged** by normalized language key (`mergeLanguageLists`); deep can add or fill proficiency without dropping base-only rows when the merge grows the combined list.  
+8. **`honors`** — Same replacement/merge pattern as other array sections via `/details/honors/`.  
+9. **`publications`** — Same via `/details/publications/`.  
+10. **`recommendations`** — Same via `/details/recommendations/?detailScreenTabIndex=0` (Received only).
 
 ### 2.3 Toggles with no dedicated deep tab
 
@@ -105,7 +120,8 @@ Missing rows, empty sections, or layout quirks on specific LinkedIn builds are *
 
 | Item | Source |
 |------|--------|
-| Twelve export section toggles + footer note | `src/popup/popup.html`, `print-main.js` |
-| Header default-on | `settings.profileHeader !== false` in `print-main.js` |
-| Eight deep slugs and merge order | `DEEP_SECTION_SLUGS`, `plannedDeepSections` in `src/background.js` |
+| Fourteen export section toggles + footer note | `src/popup/popup.html`, `print-main.js` |
+| Header default-on (includes location / slug / export date) | `settings.profileHeader !== false` in `print-main.js` |
+| Ten deep slugs and merge order | `DEEP_SECTION_SLUGS`, `plannedDeepSections` in `src/background.js` |
+| Recommendations Received-only | `buildDetailsUrl` tab index 0 |
 | Languages union merge | `mergeLanguageLists` in `src/background.js` |

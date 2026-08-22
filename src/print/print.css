@@ -34,9 +34,6 @@
     border-radius: 0 !important;
     box-shadow: none !important;
   }
-  footer {
-    display: none !important;
-  }
   .section {
     break-inside: auto;
     page-break-inside: auto;

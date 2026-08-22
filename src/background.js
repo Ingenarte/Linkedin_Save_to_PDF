@@ -1065,7 +1065,9 @@ function sectionPayloadKey(section) {
 // print view. Mirrors the non-deep flow already present in content.js.
 async function openPrintView(data, settings, job, runToken) {
   const nonce = `lnp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  await chrome.storage.local.set({ [nonce]: { data, settings } });
+  await chrome.storage.local.set({
+    [nonce]: { data, settings, exportKind: 'fullexport' },
+  });
   assertDeepJobActive(job, runToken);
   const printUrl = chrome.runtime.getURL(
     `src/print/print.html?nonce=${encodeURIComponent(nonce)}`,

@@ -230,13 +230,28 @@
     if (!sec) return undefined;
 
     function isLikelyLinkedInAdEducation(item) {
-      const blob = `${item.school || ''} ${item.degree || ''}`.toLowerCase();
+      const school = String(item.school || '').trim();
+      const degree = String(item.degree || '').trim();
+      const blob = `${school} ${degree}`.toLowerCase();
       if (!blob.trim()) return false;
-      return (
+      if (
         /why am i seeing this ad|manage your ad preferences|don't want to see this ad|sponsored\b|recommendation transparency|ad choices/.test(
           blob,
-        ) || /^more profiles for you$/i.test((item.school || '').trim())
-      );
+        )
+      )
+        return true;
+      if (/^more profiles for you$/i.test(school)) return true;
+      if (/^https?:\/\//i.test(school) || /^https?:\/\//i.test(degree))
+        return true;
+      // Profile-owned promo cards that land in the Education scaffold
+      // (seen on braismoure basic: "Únete al campus..." / mouredev.pro).
+      if (
+        /[úu]nete al|join (?:the |our )?campus|estudia programaci|campus de programaci[oó]n|mouredev\.pro|learn programming (?:and|with)/i.test(
+          blob,
+        )
+      )
+        return true;
+      return false;
     }
 
     const fromGeneric = [];

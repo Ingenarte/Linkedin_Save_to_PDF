@@ -1,6 +1,6 @@
 # Privacy Policy — LinkedIn Save to PDF (Unofficial by Ingenarte)
 
-_Last updated: 2026-05-01_
+_Applies to extension version 1.3.0. Last updated: 2026-08-22._
 
 ---
 

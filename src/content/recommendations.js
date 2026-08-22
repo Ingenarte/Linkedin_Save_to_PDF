@@ -58,7 +58,10 @@
         /\b(managed|managed directly|worked with|worked directly with|reported to|client|colleague|coworker|supervisor|manager|teammate|team member|partner|worked together|birlikte \u00e7al\u0131\u015ft\u0131k|birlikte \u00e7al\u0131\u015ft\u0131|y\u00f6neticimdi|y\u00f6neticisiydim|\u00e7al\u0131\u015fan\u0131md\u0131|dan\u0131\u015fman|m\u00fc\u015fteri|i\u015f arkada\u015f\u0131|meslekta\u015f\u0131|y\u00f6netici)\b/i;
 
       const EXACT_NOISE_REGEX =
-        /^(?:show all pending|show all|pending|bekleyen|show more|see more|more|daha fazla|daha \u00e7ok|devam\u0131n\u0131 g\u00f6r|t\u00fcm\u00fcn\u00fc g\u00f6ster|received|given|al\u0131nan|verilen|recommendations?|tavsiyeler)$/i;
+        /^(?:show all pending|show all|pending|bekleyen|show more|see more|more|daha fazla|daha \u00e7ok|devam\u0131n\u0131 g\u00f6r|t\u00fcm\u00fcn\u00fc g\u00f6ster|received|given|al\u0131nan|verilen|recommendations?|tavsiyeler|nothing to see for now)$/i;
+
+      const EMPTY_STATE_REGEX =
+        /nothing to see for now|when you add (?:new )?recommendations|recommendations? that .+ will appear here|no recommendations? (?:yet|to show)/i;
 
       const EXPAND_BUTTON_REGEX =
         /\b(?:more|show more|see more|daha fazla|devam\u0131n\u0131 g\u00f6r|ver m[a\u00e1]s|mehr)\b/i;
@@ -91,7 +94,8 @@
           .replace(/\s*[·•]\s*(?:1st|2nd|3rd|\d+(?:\.|º|ª)?\s*(?:degree|derece|st|nd|rd))\.?\s*$/i, "")
           .replace(/\b(?:1st|2nd|3rd)\b\s*$/i, "")
           .trim();
-        if (EXACT_NOISE_REGEX.test(n) || isAdNoise(n)) return "";
+        if (EXACT_NOISE_REGEX.test(n) || EMPTY_STATE_REGEX.test(n) || isAdNoise(n))
+          return "";
         return n;
       }
 
@@ -102,7 +106,8 @@
           .replace(/(?:\.{2,3}|\u2026)\s*(?:see more|show more|more|daha fazla|devamını gör|ver m[aá]s|mehr)\s*$/i, "")
           .replace(/\b(?:see more|show more|daha fazla|devamını gör)\s*$/i, "")
           .trim();
-        if (EXACT_NOISE_REGEX.test(t) || isAdNoise(t)) return "";
+        if (EXACT_NOISE_REGEX.test(t) || EMPTY_STATE_REGEX.test(t) || isAdNoise(t))
+          return "";
         return t;
       }
 
@@ -285,7 +290,14 @@
 
       const cleaned = cleanItems(results).filter((item) => {
         if (!item?.recommenderName) return false;
-        return !isAdNoise(item.recommenderName) && !EXACT_NOISE_REGEX.test(item.recommenderName);
+        const blob = [item.recommenderName, item.recommenderTitle, item.text]
+          .filter(Boolean)
+          .join(' ');
+        if (EMPTY_STATE_REGEX.test(blob)) return false;
+        return (
+          !isAdNoise(item.recommenderName) &&
+          !EXACT_NOISE_REGEX.test(item.recommenderName)
+        );
       });
 
       return cleaned.length ? cleaned : undefined;

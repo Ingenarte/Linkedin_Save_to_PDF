@@ -4,6 +4,32 @@ All notable changes to this extension will be documented here. The
 format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] — 2026-08-22
+
+### Added
+
+- Projects, Courses, and Received Recommendations: extract, Settings toggles,
+  print sections, and Full Profile `/details/` tabs.
+- Unwrap LinkedIn `safety/go` and `redir/redirect` URLs for contact and
+  project links.
+- Print filename `linkedin_{name}_{basicexport|fullexport}_{dd}_{mm}_{yyyy}`.
+
+### Changed
+
+- Print typography: skills badges, language cards, contact grid, pagination.
+- Profile header still prints location, `/in/{slug}`, and export date when
+  Profile Header is on, even if Contact is off.
+
+### Fixed
+
+- About on 2026 SDUI prefers full `sectionVisibleText`; glued sentences
+  after `.` are spaced (`tecnología.He` → `tecnología. He`).
+- Education promo cards (campus CTAs / product URLs) are not printed as
+  schools.
+- Empty Recommendations state (`Nothing to see for now`) is omitted.
+- Opening the popup off a LinkedIn profile is a status hint, not a console
+  error.
+
 ## [1.2.5] — 2026-05-16
 
 ### Fixed

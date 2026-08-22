@@ -1,15 +1,9 @@
+// Renders the profile header block with optional photo on the right
 (function () {
-  const { el, a, norm } = window.__PRINT_UTILS__;
+  const { el, a, norm, joinInline } = window.__PRINT_UTILS__;
 
   const PRONOUNS_RE =
     /^\s*(?:he\s*\/\s*him(?:\s*\/\s*his)?|she\s*\/\s*her(?:\s*\/\s*hers)?|they\s*\/\s*them(?:\s*\/\s*theirs)?|he\s*\/\s*they|she\s*\/\s*they|any pronouns?|[eé]l\s*\/\s*[eé]l|ella\s*\/\s*ella)\s*$/i;
-
-  function sanitizeForTitle(s) {
-    return (s || '')
-      .replace(/[<>:"/\\|?*]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
 
   function renderHeader(root, data, settings) {
     const section = el('section', 'header section');
@@ -32,6 +26,21 @@
     if (headline && PRONOUNS_RE.test(headline)) headline = '';
     if (headline) left.append(el('div', 'headline', headline));
 
+    const metaParts = [];
+    if (data.location) metaParts.push(data.location);
+    if (data.slug)
+      metaParts.push(
+        a(
+          `https://www.linkedin.com/in/${encodeURIComponent(data.slug)}/`,
+          `/in/${data.slug}`,
+        ),
+      );
+    if (data.lastUpdatedISO)
+      metaParts.push(
+        `Exported: ${new Date(data.lastUpdatedISO).toLocaleString()}`,
+      );
+    if (metaParts.length) left.append(joinInline(metaParts));
+
     const right = el('div', 'right');
     if (settings.withPhoto && data.profileImage) {
       const img = el('img', 'profile-photo');
@@ -50,9 +59,6 @@
 
     section.append(left, right);
     root.append(section);
-
-    const safeName = sanitizeForTitle(name);
-    document.title = safeName || 'Resume';
   }
 
   window.__PRINT_RENDER_HEADER__ = { renderHeader };

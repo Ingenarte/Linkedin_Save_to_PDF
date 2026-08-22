@@ -1,6 +1,6 @@
 (async function main() {
   try {
-    const { loadPrintSettings, el, a } = window.__PRINT_UTILS__;
+    const { loadPrintSettings, el, a, buildPrintDocumentTitle } = window.__PRINT_UTILS__;
     const { renderHeader } = window.__PRINT_RENDER_HEADER__;
     const R = window.__PRINT_RENDER_SECTIONS__;
     const { finalGlobalPhraseDedup } = window.__PRINT_FINALIZE__;
@@ -59,6 +59,11 @@
     const profile = payload.data || payload.profile || {};
     const saved = await loadPrintSettings().catch(() => ({}));
     const settings = { ...saved, ...(payload.settings || {}) };
+    document.title = buildPrintDocumentTitle(
+      profile.name || profile.slug,
+      payload.exportKind,
+      profile.lastUpdatedISO,
+    );
 
     if (isDebug) console.log('[print] Loaded payload:', { profile, settings });
 

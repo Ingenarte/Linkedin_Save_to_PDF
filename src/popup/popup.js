@@ -894,7 +894,6 @@ async function startExport(deep) {
 
     status.textContent = useDeep ? '' : 'Opening print preview...';
   } catch (err) {
-    console.error('[popup] Export error', err);
     const lastErr =
       chrome.runtime.lastError?.message || String(err?.message || err || '');
     const handledDelay = applyExportErrorToStatus(
@@ -904,6 +903,7 @@ async function startExport(deep) {
     if (handledDelay != null) {
       clearDelay = Math.max(clearDelay, handledDelay);
     } else {
+      console.error('[popup] Export error', err);
       status.textContent = `Export failed: ${lastErr}`;
     }
   } finally {

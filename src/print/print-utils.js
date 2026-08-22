@@ -35,6 +35,30 @@
     });
     return ul;
   }
+  function slugifyName(name) {
+    const s = String(name || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    return s || 'profile';
+  }
+
+  function formatExportDate(iso) {
+    const d = iso ? new Date(iso) : new Date();
+    const safe = Number.isNaN(d.getTime()) ? new Date() : d;
+    const dd = String(safe.getDate()).padStart(2, '0');
+    const mm = String(safe.getMonth() + 1).padStart(2, '0');
+    const yyyy = String(safe.getFullYear());
+    return `${dd}_${mm}_${yyyy}`;
+  }
+
+  function buildPrintDocumentTitle(name, exportKind, iso) {
+    const kind = exportKind === 'fullexport' ? 'fullexport' : 'basicexport';
+    return `linkedin_${slugifyName(name)}_${kind}_${formatExportDate(iso)}`;
+  }
+
   function joinInline(parts, sep = ' · ') {
     const wrap = el('div', 'meta');
     const clean = parts.filter(Boolean);
@@ -87,5 +111,6 @@
     joinInline,
     ensureHref,
     loadPrintSettings,
+    buildPrintDocumentTitle,
   };
 })();

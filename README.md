@@ -1,5 +1,7 @@
 # LinkedIn Save to PDF (Ingenarte) — Unofficial
 
+**Current version:** 1.3.0
+
 Export a clean, print-ready view of your LinkedIn profile as PDF — even if the official “Save to PDF” option is missing.  
 All processing happens **locally** in your browser. No data is collected or transmitted.
 
@@ -16,7 +18,7 @@ All processing happens **locally** in your browser. No data is collected or tran
 - **One-click export** from any LinkedIn profile.
 - **Clean layout** optimized for printing or PDF saving.
 - **Light mode only** for consistent print results.
-- **Customizable sections** (photo, contact info, experience, education, skills, etc.).
+- **Customizable sections** (photo, contact, about, experience, education, projects, courses, certifications, skills, languages, honors, publications, recommendations).
 - Works with **LinkedIn profiles in any language**.
 - **Full Profile export (opt-in)** — after explicit confirmation, the extension opens same-profile `/details/<section>/` pages in temporary background tabs, one at a time, so entries truncated on the main profile page can be included in the PDF. Runs locally, serially, only on user action.
 

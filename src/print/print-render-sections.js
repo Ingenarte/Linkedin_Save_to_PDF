@@ -92,10 +92,23 @@
     root.append(s);
   }
 
+  function isPromoEducation(ed) {
+    const school = String(ed?.school || '').trim();
+    const degree = String(ed?.degree || '').trim();
+    const blob = `${school} ${degree}`.toLowerCase();
+    if (!blob.trim()) return true;
+    if (/^https?:\/\//i.test(school) || /^https?:\/\//i.test(degree)) return true;
+    return /[úu]nete al|join (?:the |our )?campus|estudia programaci|campus de programaci[oó]n|mouredev\.pro|learn programming (?:and|with)/i.test(
+      blob,
+    );
+  }
+
   function renderEducation(root, data) {
     if (!data.education?.length) return;
+    const valid = data.education.filter((ed) => ed && ed.school && !isPromoEducation(ed));
+    if (!valid.length) return;
     const s = section('Education');
-    data.education.forEach((ed) => {
+    valid.forEach((ed) => {
       const div = el('div', 'item education-item');
       if (ed.school) div.append(el('div', 'school', ed.school));
       const meta = [];
@@ -107,7 +120,7 @@
       if (meta.length) div.append(el('div', 'meta', meta.join(' · ')));
       if (norm(div.textContent)) s.append(div);
     });
-    root.append(s);
+    if (s.querySelector('.item')) root.append(s);
   }
 
   function renderCertifications(root, data) {
@@ -249,6 +262,12 @@
     const isNoise = (str) => {
       if (!str) return false;
       const s = String(str).trim();
+      if (
+        /nothing to see for now|when you add (?:new )?recommendations|recommendations? that .+ will appear here|no recommendations? (?:yet|to show)/i.test(
+          s,
+        )
+      )
+        return true;
       if (s.length > 80) return false;
       return (
         /^(?:show all pending|show all|pending|bekleyen|questions\??|visit our help center|manage your account|recommendation transparency|linkedin corporation|why am i seeing this ad|manage your ad preferences)$/i.test(

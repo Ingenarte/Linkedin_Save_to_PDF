@@ -24,13 +24,6 @@
         const host = url.hostname.toLowerCase();
         if (host.endsWith('linkedin.com') || host === 'lnkd.in') return true;
         if (
-          host.includes('youtube.com') ||
-          host === 'youtu.be' ||
-          host.includes('tiktok.com') ||
-          host.includes('facebook.com') ||
-          host.includes('instagram.com') ||
-          host.includes('twitter.com') ||
-          host.includes('x.com') ||
           host.includes('googletagmanager.com') ||
           host.includes('google-analytics.com')
         )
@@ -59,8 +52,11 @@
     }
 
     if (!rawAnchors.length) {
-      const topcard = Q('main section') || Q('main') || document;
-      rawAnchors = QA('.pv-top-card a[href], .pv-text-details a[href]', topcard);
+      const topcard = Q('main') || document;
+      rawAnchors = QA(
+        'a[href^="mailto:"], a[href^="https://"], a[href^="http://"]',
+        topcard,
+      );
     }
 
     const raw = uniqueByCI(
@@ -73,7 +69,7 @@
     const email = raw.find((h) => /^mailto:/i.test(h));
     const websites = raw
       .filter((h) => /^https?:\/\//i.test(h) && !isNoiseContactUrl(h))
-      .slice(0, 3);
+      .slice(0, 5);
 
     return {
       email: email ? email.replace(/^mailto:/i, '') : undefined,
